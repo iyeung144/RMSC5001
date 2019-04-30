@@ -1,0 +1,119 @@
+---
+title: "RMSC5001 Project"
+author: "Yeung Ka Ming"
+date: "18/04/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## library
+```{r}
+library(nnet)
+library(data.table)
+library(ggplot2)
+library(ggthemes)
+library(tidyverse)
+library(zoo)
+```
+
+## Data preparation
+```{r}
+#files <- list.files(pattern="*.csv")
+#d <- do.call(rbind, lapply(files, fread))
+
+d <- read.csv("season-1718_csv.csv",stringsAsFactors = F)
+#v <- d[,c(11:22)]
+```
+
+```{r}
+pca1 <- princomp(d[,-c(1:10)],cor=TRUE)
+#pca2 <- prcomp(v,center = TRUE, scale = TRUE)
+```
+
+## Plot
+```{r}
+par(mfrow=c(1,2))
+screeplot(pca1, type = "l", npcs = 10, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(pca1$sdev^2 / sum(pca1$sdev^2))
+plot(cumpro[0:10], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 4, col="blue", lty=5)
+abline(h = 0.60276952, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC3"),
+       col=c("blue"), lty=5, cex=0.6)
+#screeplot(pca2, type = "l", npcs = 10, main = "Screeplot of the first 10 PCs")
+```
+
+## Scatter plot
+```{r}
+score1 <- pca1$scores[,1:5]
+pairs(score1)
+
+```
+
+## Loadings
+```{r}
+#Loadings
+(Loadings <- pca1$loadings[,1:4] %>% round(2) %>% data.frame %>% 
+    mutate(Attribute = rownames(.)) %>% 
+    select(Attribute, everything()) %>% 
+arrange(Comp.2))
+```
+
+## Scores 4 component add it to DATA
+```{r}
+d$PC1<- pca1$scores[,1]
+d$PC2<- pca1$scores[,2]
+d$PC3<- pca1$scores[,3]
+d$PC4<- pca1$scores[,4]
+```
+
+## Plot time series of the Index by teams
+```{r}
+d %>%
+  ggplot() + 
+  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F) + 
+  geom_hline(yintercept= 0, colour ='red') +
+  facet_wrap(~HomeTeam) + 
+  labs(x = "Date", 
+       y = "PC1",
+       title = "PC1 time series by teams") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_labels = "%Y (%b)")
+```
+
+```{r}
+d %>%
+ group_by(HomeTeam) %>% summarise(
+ Index.1 = mean(PC1),
+ Index.2 = mean(PC2)
+ ) %>% arrange(desc(Index.1)) %>%
+ select(HomeTeam, Index.1) %>%
+ data.frame %>% write.csv(row.names =F)
+```
+
+```{r}
+d %<>% group_by(HomeTeam) %>%
+ arrange(Date) %>%
+ mutate(
+ M.A.PC1 = rollmeanr(PC1, 15, fill = NA ),
+ M.A.PC2 = rollmeanr(PC2, 15, fill = NA )
+ )
+
+Index.1718 <- d %>% group_by(HomeTeam) %>%
+ filter(Date == max(Date)) %>%
+ select(HomeTeam, M.A.PC1, M.A.PC2, Date) %>%
+ arrange(M.A.PC1)
+
+ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
+ geom_point(show.legend = F) +
+ geom_text(aes(label = HomeTeam), check_overlap = TRUE, nudge_y = 0.08,
+ show.legend = F, size = 2.9) +
+ labs(x = 'PC1', y = 'PC2')
+```
+

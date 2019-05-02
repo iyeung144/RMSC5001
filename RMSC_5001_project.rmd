@@ -1,8 +1,17 @@
 ---
 title: "RMSC5001 Project"
-author: "Yeung Ka Ming"
-date: "18/04/2019"
-output: html_document
+author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka Ming 1155104060
+date: "`r Sys.Date()`"
+always_allow_html: yes
+output:
+  html_document:
+    df_print: paged
+    highlight: tango
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -13,107 +22,195 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(nnet)
 library(data.table)
+library(corrplot)
 library(ggplot2)
 library(ggthemes)
 library(tidyverse)
 library(zoo)
+library(factoextra)
+library(FactoMineR)
+library(knitr)
 ```
 
 ## Data preparation
 ```{r}
-#files <- list.files(pattern="*.csv")
-#d <- do.call(rbind, lapply(files, fread))
+# files <- list.files(pattern="*.csv")
+# d <- do.call(rbind, lapply(files, fread))
 
-d <- read.csv("season-1718_csv.csv",stringsAsFactors = F)
-#v <- d[,c(11:22)]
+d <- read.csv("season-1718_csv.csv", stringsAsFactors = FALSE)
+# d <- read.table("season-1718_csv.csv", header=TRUE, sep=",", row.names=1, check.names=FALSE)
+d1 <- d %>% group_by(HomeTeam) %>% summarise(HS = sum(HS), AS = sum(AS), HST = sum(HST), AST = sum(AST), HF = sum(HF), AF = sum(AF), HC = sum(HC), AC = sum(AC), HY = sum(HY), AY = sum(AY), HR = sum(HR), AR = sum(AR))
+league.df <- column_to_rownames(d1, var = "HomeTeam")
+field <- read.csv("field.csv")
 ```
 
+## Data field legend
+```{r echo=FALSE,results='asis'}
+kable(field, caption = "Field Information")
+```
+
+## Data exploration
 ```{r}
-pca1 <- princomp(d[,-c(1:10)],cor=TRUE)
-#pca2 <- prcomp(v,center = TRUE, scale = TRUE)
+(league.df)
+r <- cor(league.df)
+corrplot.mixed(r, lower = "circle", upper = "number")
 ```
 
-## Plot
+## PCA
 ```{r}
-par(mfrow=c(1,2))
-screeplot(pca1, type = "l", npcs = 10, main = "Screeplot of the first 10 PCs")
-abline(h = 1, col="red", lty=5)
-legend("topright", legend=c("Eigenvalue = 1"),
-       col=c("red"), lty=5, cex=0.6)
-cumpro <- cumsum(pca1$sdev^2 / sum(pca1$sdev^2))
-plot(cumpro[0:10], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
-abline(v = 4, col="blue", lty=5)
-abline(h = 0.60276952, col="blue", lty=5)
-legend("topleft", legend=c("Cut-off @ PC3"),
-       col=c("blue"), lty=5, cex=0.6)
-#screeplot(pca2, type = "l", npcs = 10, main = "Screeplot of the first 10 PCs")
+# pca1 <- princomp(d[,-c(1:10)],cor=TRUE)
+# pca2 <- prcomp(d[,-c(1:10)],center = TRUE, scale = TRUE)
+# pca <- prcomp(d1[,-1],center = TRUE, scale = TRUE)
+pca <- prcomp(league.df, center = TRUE, scale = TRUE)
 ```
+
+## Scree Plot and Eignevalues analysis
+```{r}
+fviz_screeplot(pca, addlabels = TRUE, ylim = c(0, 50), main = "Screeplot of the first 10 PCs")
+(get_eigenvalue(pca))
+```
+From the graph, for the first five PCs explain 87.80% of total variance. Since the eigenvalues beyond PC5 are significantly less than 1, according to Kaiser Rule, which mean they are explaining less variance than one independent variable. Therefore, total 5 PCs will be used.
 
 ## Scatter plot
 ```{r}
-score1 <- pca1$scores[,1:5]
+score1 <- pca$x[, 1:5]
 pairs(score1)
+```
 
+## PCA results
+```{r}
+var <- get_pca_var(pca)
+(zapsmall(var$cos2[, 1:5]))
+(zapsmall(var$contrib[, 1:5]))
+```
+
+## Correlation circle
+The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The representation of variables differs from the plot of the observations: The observations are represented by their projections, but the variables are represented by their correlations (Abdi and Williams 2010). 
+```{r}
+fviz_pca_var(pca,
+  col.var = "cos2",
+  gradient.cols = c("black", "blue", "red"),
+  repel = TRUE # Avoid text overlapping
+)
+```
+From the plot, positive correlated variables will group together. 'Attack' attributes are grouped together.
+
+One interesting observation is home team fouls are positively related to yellow cards while negative related to red cards. Away teams are vice versa. This can be easily related to home advantage of field games. Referees may be more inclined to give minor punishment to home team while away teams have higher chance to get red cards for foul play.
+
+## Quality of representation
+```{r}
+corrplot(var$cos2[, 1:5], is.corr = FALSE)
+corrplot(var$cos2, is.corr = FALSE)
+# Total cos2 of variables on PC1 and PC2
+fviz_cos2(pca, choice = "var", axes = 1:2, title = "Sum of independent variables in PC1 and PC2")
+```
+
+## Contributions of variables to PCs
+```{r}
+par(mfrow = c(3, 2), mar = c(3, 3, 3, 3))
+# Contributions of variables to PC1
+fviz_contrib(pca, choice = "var", axes = 1, top = 12, fill = "#3d195b")
+# Contributions of variables to PC2
+fviz_contrib(pca, choice = "var", axes = 2, top = 12, fill = "#3d195b")
+# Contributions of variables to PC3
+fviz_contrib(pca, choice = "var", axes = 3, top = 12, fill = "#3d195b")
+# Contributions of variables to PC4
+fviz_contrib(pca, choice = "var", axes = 4, top = 12, fill = "#3d195b")
+# Contributions of variables to PC5
+fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b")
+```
+The 1/N mean level is represented by the red dash line.
+
+## Quality and contribution
+```{r}
+fviz_pca_ind(pca,
+  col.ind = "cos2", pointsize = "cos2",
+  gradient.cols = c("black", "blue", "red"),
+  repel = TRUE
+)
+fviz_contrib(pca, choice = "ind", axes = 1:2, fill = "#3d195b")
+```
+
+## Biplot
+```{r}
+fviz_pca_biplot(pca,
+  repel = TRUE,
+  col.var = "blue", # Variables color
+  col.ind = "#3d195b" # Individuals color
+)
 ```
 
 ## Loadings
 ```{r}
-#Loadings
-(Loadings <- pca1$loadings[,1:4] %>% round(2) %>% data.frame %>% 
-    mutate(Attribute = rownames(.)) %>% 
-    select(Attribute, everything()) %>% 
-arrange(Comp.2))
+(Loadings <- pca$rotation[, 1:5] %>%
+  round(2) %>%
+  data.frame() %>%
+  mutate(Attribute = rownames(.)) %>%
+  select(Attribute, everything()) %>%
+  arrange(PC1))
 ```
 
 ## Scores 4 component add it to DATA
 ```{r}
-d$PC1<- pca1$scores[,1]
-d$PC2<- pca1$scores[,2]
-d$PC3<- pca1$scores[,3]
-d$PC4<- pca1$scores[,4]
+d$PC1 <- pca$x[, 1]
+d$PC2 <- pca$x[, 2]
+d$PC3 <- pca$x[, 3]
+d$PC4 <- pca$x[, 4]
+d$PC5 <- pca$x[, 5]
 ```
 
 ## Plot time series of the Index by teams
 ```{r}
 d %>%
-  ggplot() + 
-  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F) + 
-  geom_hline(yintercept= 0, colour ='red') +
-  facet_wrap(~HomeTeam) + 
-  labs(x = "Date", 
-       y = "PC1",
-       title = "PC1 time series by teams") +
+  ggplot() +
+  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F) +
+  geom_hline(yintercept = 0, colour = "red") +
+  facet_wrap(~HomeTeam) +
+  labs(
+    x = "Date",
+    y = "PC1",
+    title = "PC1 time series by teams"
+  ) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   scale_x_date(date_labels = "%Y (%b)")
 ```
 
+## Mean of PC1 and PC2
 ```{r}
 d %>%
- group_by(HomeTeam) %>% summarise(
- Index.1 = mean(PC1),
- Index.2 = mean(PC2)
- ) %>% arrange(desc(Index.1)) %>%
- select(HomeTeam, Index.1) %>%
- data.frame %>% write.csv(row.names =F)
+  group_by(HomeTeam) %>%
+  summarise(
+    Index.1 = mean(PC1),
+    Index.2 = mean(PC2)
+  ) %>%
+  arrange(desc(Index.1)) %>%
+  select(HomeTeam, Index.1)
+# %>%
+#  data.frame %>% write.csv(row.names =F)
 ```
 
+
+## Rolling mean of PC1 and PC2
 ```{r}
 d %<>% group_by(HomeTeam) %>%
- arrange(Date) %>%
- mutate(
- M.A.PC1 = rollmeanr(PC1, 15, fill = NA ),
- M.A.PC2 = rollmeanr(PC2, 15, fill = NA )
- )
+  arrange(Date) %>%
+  mutate(
+    M.A.PC1 = rollmeanr(PC1, 15, fill = NA),
+    M.A.PC2 = rollmeanr(PC2, 15, fill = NA)
+  )
 
-Index.1718 <- d %>% group_by(HomeTeam) %>%
- filter(Date == max(Date)) %>%
- select(HomeTeam, M.A.PC1, M.A.PC2, Date) %>%
- arrange(M.A.PC1)
+Index.1718 <- d %>%
+  group_by(HomeTeam) %>%
+  filter(Date == max(Date)) %>%
+  select(HomeTeam, M.A.PC1, M.A.PC2, Date) %>%
+  arrange(M.A.PC1)
 
 ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
- geom_point(show.legend = F) +
- geom_text(aes(label = HomeTeam), check_overlap = TRUE, nudge_y = 0.08,
- show.legend = F, size = 2.9) +
- labs(x = 'PC1', y = 'PC2')
+  geom_point(show.legend = F) +
+  geom_text(aes(label = HomeTeam),
+    check_overlap = TRUE, nudge_y = 0.08,
+    show.legend = F, size = 2.9
+  ) +
+  labs(x = "PC1", y = "PC2")
 ```
 

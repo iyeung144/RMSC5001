@@ -1,0 +1,23 @@
+Field Name,Order,Type (Format),Description
+Date,1,date (%Y-%m-%d),Match Date (dd/mm/yy)
+HomeTeam,2,string (default),Home Team
+AwayTeam,3,string (default),Away Team
+FTHG,4,integer (default),Full Time Home Team Goals
+FTAG,5,integer (default),Full Time Away Team Goals
+FTR,6,string (default),"Full Time Result (H=Home Win, D=Draw, A=Away Win)"
+HTHG,7,integer (default),Half Time Home Team Goals
+HTAG,8,integer (default),Half Time Away Team Goals
+HTR,9,string (default),"Half Time Result (H=Home Win, D=Draw, A=Away Win)"
+Referee,10,string (default),Match Referee
+HS,11,integer (default),Home Team Shots
+AS,12,integer (default),Away Team Shots
+HST,13,integer (default),Home Team Shots on Target
+AST,14,integer (default),Away Team Shots on Target
+HF,15,integer (default),Home Team Fouls Committed
+AF,16,integer (default),Away Team Fouls Committed
+HC,17,integer (default),Home Team Corners
+AC,18,integer (default),Away Team Corners
+HY,19,integer (default),Home Team Yellow Cards
+AY,20,integer (default),Away Team Yellow Cards
+HR,21,integer (default),Home Team Red Cards
+AR,22,integer (default),Away Team Red Cards

@@ -6,9 +6,9 @@ always_allow_html: yes
 output:
   html_document:
     df_print: paged
-    highlight: tango
+    highlight: pygments
     number_sections: yes
-    theme: journal
+    theme: flatly
     toc: yes
     toc_depth: 5
     toc_float: yes
@@ -18,8 +18,40 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Introduction
+
+>“I never had a problem reaching a decision based on imperfect information. That’s just the way the world works.” 
+>― *Alex Ferguson, Leading: Learning from Life and My Years at Manchester United*
+
+Legendary football manager Sir Alex Ferguson surely never had a problem in managing Manchester United from 1986 to 2013. However, for other clubs who try to win the English Premier League, they may have to rely on other insights to achieve this goal.
+
+Principal component analysis will be one of the keys to answer this question.
+
+Abstract
+
+1. Problem
++ What make a team win?
++ In what way some teams are better than the others?  
+
+2. Dataset description
++The English Premier League (EPL) Season 2017-2018 statistics. It is downloaded from DataHub (https://datahub.io/sports-data/english-premier-league). Details of the dataset will be discussed below.
+
+3. Method to use
++Principal component analysis.
+The reasons of using PCA can be summarized as follow:
+  i) The main idea is trying to capture as much information as possible while reducing the complexity of problems for easier analysis. Each principal component (PC) is a linear combination of the variables makes up a principal component. The loadings show the relative importance of the variable of each PC.
+  ii) Meaningful 2D plot can be made instead of handling fancy high dimenisonal plots.
+  iii) No need to define dependent variable or make assumption on underlying distribution of variables. It gives flexibility in analysis the problem.
+
+4. Findings
+
+5. Conclusion
+
+==================
+
+# Set Up
 ## library
-```{r}
+```{r load packages, message=FALSE, warning=FALSE}
 library(nnet)
 library(data.table)
 library(corrplot)
@@ -32,42 +64,72 @@ library(FactoMineR)
 library(knitr)
 ```
 
-## Data preparation
-```{r}
-# files <- list.files(pattern="*.csv")
-# d <- do.call(rbind, lapply(files, fread))
-
-d <- read.csv("season-1718_csv.csv", stringsAsFactors = FALSE)
-# d <- read.table("season-1718_csv.csv", header=TRUE, sep=",", row.names=1, check.names=FALSE)
-d1 <- d %>% group_by(HomeTeam) %>% summarise(HS = sum(HS), AS = sum(AS), HST = sum(HST), AST = sum(AST), HF = sum(HF), AF = sum(AF), HC = sum(HC), AC = sum(AC), HY = sum(HY), AY = sum(AY), HR = sum(HR), AR = sum(AR))
-league.df <- column_to_rownames(d1, var = "HomeTeam")
-field <- read.csv("field.csv")
-```
-
 ## Data field legend
-```{r echo=FALSE,results='asis'}
+Below is the information of the dataset. The English Premier League (EPL) Season 2017 - 2018 is the study focus. It consists of 22 variables.
+```{r echo=FALSE, results='asis'}
+field <- read.csv("field.csv")
 kable(field, caption = "Field Information")
 ```
 
-## Data exploration
+## Read data and blend data to a dataframe
+Game play statistics are independent variables to explain the game, i.e. variance of the game, while the output are game results. Only variables from 11 to 23 are used for principal component analysis.
+Besides, the analysis is based on HomeTeam data first. AwayTeam can be done in the same way.
 ```{r}
-(league.df)
-r <- cor(league.df)
-corrplot.mixed(r, lower = "circle", upper = "number")
+d <- read.csv("season-1718_csv.csv", stringsAsFactors = FALSE)
+d1 <- d %>% group_by(HomeTeam) %>% summarise(HS = sum(HS), AS = sum(AS), HST = sum(HST), AST = sum(AST), HF = sum(HF), AF = sum(AF), HC = sum(HC), AC = sum(AC), HY = sum(HY), AY = sum(AY), HR = sum(HR), AR = sum(AR))
+league.df <- column_to_rownames(d1, var = "HomeTeam")
 ```
 
-## PCA
+## Data exploration
+The EPL has 20 clubs and each club will play the others twice in the season, once at their home stadium and once at that of their opponents', for 38 games. Therefore the total number of records are 20 x 19 of 380 with 12 independent variables, which makes up 4,560 data points. The analysis can be easily extended to include other seasons. However, for simplicity, our study just use Season 2017 - 2018.
+
+### General statistics
+```{r}
+(league.df)
+summary(league.df)
+ggplot(stack(league.df), aes(x = ind, y = values)) +
+geom_boxplot(fill = "#3d195b", colour = "red") +
+  labs(
+    x = "Variables",
+    y = "Values",
+    title = "Boxplot for 12 variables"
+  )
+
+```
+
+Some facts can be concluded from the boxplot:
+
+1. Home Team is more aggressive in attack. This is supported by higher Home Shot, Home Shot on Target and Home Corner values.
+2. Fouls are comparable between Home Team and Away Team.
+
+### Correlation plot
+```{r}
+r <- cor(league.df)
+corrplot.mixed(r, lower = "square", upper = "number",order="FPC")
+```
+
+Home Foul is negatively related to Home Shot, which can be interperted as better play with better sport manner.
+
+While Away Foul is not strongly correlated to other factors. Red Card factor is comparable between Home Team and Away Team, which can be interperted as Red Card is an event not related to attack or defence statistics, maybe it is more a referee related issue.
+
+All Home-related and Away-related factors are negatively correlated to each other, which is a resonable representation.
+
+# PCA
+For PCA, prcomp is used because according to literature, prcomp uses singular value decomposition which is generally the preferred method for numerical accuracy.
+
+## Summary of PCA
 ```{r}
 # pca1 <- princomp(d[,-c(1:10)],cor=TRUE)
 # pca2 <- prcomp(d[,-c(1:10)],center = TRUE, scale = TRUE)
 # pca <- prcomp(d1[,-1],center = TRUE, scale = TRUE)
 pca <- prcomp(league.df, center = TRUE, scale = TRUE)
+summary(pca)
 ```
 
 ## Scree Plot and Eignevalues analysis
 ```{r}
 fviz_screeplot(pca, addlabels = TRUE, ylim = c(0, 50), main = "Screeplot of the first 10 PCs")
-(get_eigenvalue(pca))
+zapsmall(get_eigenvalue(pca))
 ```
 From the graph, for the first five PCs explain 87.80% of total variance. Since the eigenvalues beyond PC5 are significantly less than 1, according to Kaiser Rule, which mean they are explaining less variance than one independent variable. Therefore, total 5 PCs will be used.
 
@@ -84,6 +146,7 @@ var <- get_pca_var(pca)
 (zapsmall(var$contrib[, 1:5]))
 ```
 
+# Findings
 ## Correlation circle
 The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The representation of variables differs from the plot of the observations: The observations are represented by their projections, but the variables are represented by their correlations (Abdi and Williams 2010). 
 ```{r}
@@ -102,7 +165,7 @@ One interesting observation is home team fouls are positively related to yellow 
 corrplot(var$cos2[, 1:5], is.corr = FALSE)
 corrplot(var$cos2, is.corr = FALSE)
 # Total cos2 of variables on PC1 and PC2
-fviz_cos2(pca, choice = "var", axes = 1:2, title = "Sum of independent variables in PC1 and PC2")
+fviz_cos2(pca, choice = "var", axes = 1:2, title = "Sum of independent variables in PC1 and PC2", fill = "#3d195b")
 ```
 
 ## Contributions of variables to PCs
@@ -159,11 +222,11 @@ d$PC4 <- pca$x[, 4]
 d$PC5 <- pca$x[, 5]
 ```
 
-## Plot time series of the Index by teams
+## Plot time series of the Index by the clubs
 ```{r}
 d %>%
   ggplot() +
-  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F) +
+  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F, colour = "#3d195b") +
   geom_hline(yintercept = 0, colour = "red") +
   facet_wrap(~HomeTeam) +
   labs(
@@ -184,11 +247,10 @@ d %>%
     Index.2 = mean(PC2)
   ) %>%
   arrange(desc(Index.1)) %>%
-  select(HomeTeam, Index.1)
+  select(HomeTeam, Index.1, Index.2)
 # %>%
 #  data.frame %>% write.csv(row.names =F)
 ```
-
 
 ## Rolling mean of PC1 and PC2
 ```{r}
@@ -206,7 +268,7 @@ Index.1718 <- d %>%
   arrange(M.A.PC1)
 
 ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
-  geom_point(show.legend = F) +
+  geom_point(show.legend = F, colour = "#3d195b", size = 5) +
   geom_text(aes(label = HomeTeam),
     check_overlap = TRUE, nudge_y = 0.08,
     show.legend = F, size = 2.9
@@ -214,3 +276,4 @@ ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
   labs(x = "PC1", y = "PC2")
 ```
 
+# Conclusion

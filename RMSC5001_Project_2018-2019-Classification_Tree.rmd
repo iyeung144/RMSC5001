@@ -1,0 +1,133 @@
+---
+title: "RMSC5001 Project 2018-2019 - Classification Tree"
+author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka
+  Ming 1155104060
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    highlight: pygments
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '5'
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 100)
+```
+
+# Set Up
+## Library
+```{r load packages, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(party)
+library(tidyverse)
+```
+
+## Data exploration
+```{r read data}
+d <- read.csv("world.csv", header = TRUE)
+n<-nrow(d) # get sample size
+set.seed(12345) # set random seed
+r<-0.80 # set sampling ratio
+id<-sample(1:n,size=round(r*n)) # generate id
+train<-d[id,] # training dataset
+test<-d[-id,]
+head(d)
+```
+
+## Different income groups probability
+```{r}
+# All data
+prop.table(table(d$INCOME_GROUP))
+d[,-1] %>% 
+  count(INCOME_GROUP) %>% 
+  ggplot() + 
+  geom_col(aes(x=INCOME_GROUP, y=n), 
+           fill = "#002244", 
+           colour = "#002244") + 
+  ggtitle("All data income group counts") +
+  theme_fivethirtyeight()
+
+# Training data
+prop.table(table(train$INCOME_GROUP)) 
+train[,-1] %>% 
+  count(INCOME_GROUP) %>% 
+  ggplot() + 
+  geom_col(aes(x=INCOME_GROUP, y=n), 
+           fill = "#002244", 
+           colour = "#002244") + 
+  ggtitle("Testing data income group counts") +
+  theme_fivethirtyeight()
+
+# Testing data
+prop.table(table(test$INCOME_GROUP))
+test[,-1] %>% 
+  count(INCOME_GROUP) %>% 
+  ggplot() + 
+  geom_col(aes(x=INCOME_GROUP, y=n), 
+           fill = "#002244", 
+           colour = "#002244") + 
+  ggtitle("Training data income group counts") +
+  theme_fivethirtyeight()
+```
+
+# Decision Tree
+## Classification Tree
+```{r}
+ctree<-rpart(INCOME_GROUP~
+               REGION+GDP +
+               LABOUR_FORCE +
+               LIFE_EXPECTANCY + 
+               MILITARY_EXPENSE +
+               HIGH_TECHNOLOGY_EXPORT +
+               CORRUPTION,
+             data = train, method = "class")
+```
+
+## Plot Classification Tree
+```{r}
+rpart.plot(ctree,extra=104)
+```
+
+## Print Ctree
+```{r}
+print(ctree)
+```
+
+## Prediction in training dataset
+```{r}
+predict_train<-predict(ctree)
+cl_train<-max.col(predict_train)
+table(cl_train,train$INCOME_GROUP)
+
+predict_train <- predict(ctree, train, type = 'class')
+table(train$INCOME_GROUP,predict_train)
+```
+
+## Prediction in testing dataset
+```{r}
+predict_test<-predict(ctree,test) # out-sample
+cl_test<-max.col(predict_test)
+table(cl_test,test$INCOME_GROUP)
+
+predict_test <- predict(ctree,test, type = 'class')
+table(test$INCOME_GROUP,predict_test)
+```
+

@@ -1,0 +1,9 @@
+Column,Name,Description ,Value 
+1,REGION,Regions ,Continuous 
+2,GDP,Country GDP in USD ,Continuous 
+3,LABOUR_FORCE,Working Force in the countries ,Continuous 
+4,LIFE_EXPECTANCY,Average Life Expectancy in years ,Continuous 
+5,MILITARY_EXPENSE,Military expenditure (% of GDP),Continuous 
+6,HIGH_TECHNOLOGY_EXPORT,High Technology exports value in USD,Continuous 
+7,CORRUPTION,Corruption Level (1=low to 6=high),Continuous 
+8,INCOME_GROUP,Income Group ,Continuous 

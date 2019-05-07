@@ -4,6 +4,9 @@ author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, K
   Ming 1155104060
 date: "`r Sys.Date()`"
 output:
+  word_document:
+    toc: yes
+    toc_depth: '5'
   html_document:
     df_print: paged
     highlight: pygments
@@ -12,15 +15,20 @@ output:
     toc: yes
     toc_depth: 5
     toc_float: yes
-  word_document:
-    toc: yes
-    toc_depth: '5'
 always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Introduction
+>“The world cannot be understood without numbers. But the world cannot be understood with numbers alone.”
+>― *Hans Rosling, Factfulness: Ten Reasons We're Wrong About the World—and Why Things Are Better Than You Think*[^1]
+
+[^1]:  Factfulness: Ten Reasons We're Wrong About the World – and Why Things Are Better Than You Think by Hans Rosling, Ola Rosling, Anna Rosling Rönnlund. ISBN 9781473637467
+
+When we were young, teachers often taught us the differences between developed and developing countries. The simplest way to define a country whether it is developed or developing is by GDP per capita. Since 2016, the World Bank is no longer distinguishing the term developed and developing. Instead, the World Bank classify countries by income: “low-income, lower-middle-income, upper-middle income and high-income economies”. Now we are interested to know which factors contribute to levels of income. We would like to have decision rules and a model to help us to determine the income group of countries.
 
 ```{r set-options, echo=FALSE, cache=FALSE}
 options(width = 100)
@@ -31,6 +39,7 @@ options(width = 100)
 ```{r load packages, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(ggthemes)
+library(gridExtra)
 library(knitr)
 
 library(rpart)
@@ -38,6 +47,21 @@ library(rpart.plot)
 library(rattle)
 library(party)
 library(tidyverse)
+```
+
+## Dataset
+We extracted total 1416 data from World Bank Database which cover dependent variable of region, GDP, labor force, life expectancy, military expense, high technology export and corruption for 177 countries. Some data are missing as military expense, high technology export data and corruption are unknown for some countries in the World Bank database. We have removed countries name to simplify the dataset .We have used income group as the target variable. There are 4 different income groups as prediction results.
+All the data are retrieved from the World Bank database[^2].
+
+[^2]: https://databank.worldbank.org/data/home.aspx
+
+## Data field legend
+```{r data field, echo=FALSE, results='asis'}
+income <- read.csv("worldbank_income.csv")
+kable(income, caption = "World Bank definition on the income group")
+
+field <- read.csv("worldbank_field.csv")
+kable(field, caption = "Field information")
 ```
 
 ## Data exploration
@@ -53,42 +77,49 @@ head(d)
 ```
 
 ## Different income groups probability
-```{r}
+```{r plot income group number}
 # All data
 prop.table(table(d$INCOME_GROUP))
-d[,-1] %>% 
+all_plot <- d[,-1] %>% 
   count(INCOME_GROUP) %>% 
   ggplot() + 
   geom_col(aes(x=INCOME_GROUP, y=n), 
            fill = "#002244", 
            colour = "#002244") + 
-  ggtitle("All data income group counts") +
+  ggtitle("Income group (All data)") +
+  coord_flip() +
   theme_fivethirtyeight()
 
 # Training data
 prop.table(table(train$INCOME_GROUP)) 
-train[,-1] %>% 
+train_plot <- train[,-1] %>% 
   count(INCOME_GROUP) %>% 
   ggplot() + 
   geom_col(aes(x=INCOME_GROUP, y=n), 
            fill = "#002244", 
            colour = "#002244") + 
-  ggtitle("Testing data income group counts") +
+  ggtitle("Income group (Training data)") +
+  coord_flip() +
   theme_fivethirtyeight()
 
 # Testing data
 prop.table(table(test$INCOME_GROUP))
-test[,-1] %>% 
+test_plot <- test[,-1] %>% 
   count(INCOME_GROUP) %>% 
   ggplot() + 
   geom_col(aes(x=INCOME_GROUP, y=n), 
            fill = "#002244", 
            colour = "#002244") + 
-  ggtitle("Training data income group counts") +
+  ggtitle("Income group (Testing data)") +
+  coord_flip() +
   theme_fivethirtyeight()
+
+grid.arrange(all_plot, train_plot, test_plot, nrow=3, ncol=1)
 ```
 
-# Decision Tree
+# Methodology
+The classification tree was built based on the binary splitting of variables, one at a time. The tree is constructed such that each terminal node is as “pure” as possible. That is, in each terminal node, most of the observations are belongs to the same group. Once the classification tree is built, a set of simple classification rules can be easily obtained. Since this method will search for all possible binary splitting of the variables, it is computational intensive and may be time consuming.
+
 ## Classification Tree
 ```{r}
 ctree<-rpart(INCOME_GROUP~
@@ -98,7 +129,9 @@ ctree<-rpart(INCOME_GROUP~
                MILITARY_EXPENSE +
                HIGH_TECHNOLOGY_EXPORT +
                CORRUPTION,
-             data = train, method = "class")
+             data = train,
+             method = "class",
+             control = rpart.control(cp = 0))
 ```
 
 ## Plot Classification Tree
@@ -111,23 +144,87 @@ rpart.plot(ctree,extra=104)
 print(ctree)
 ```
 
+## Decision Rule:
+```{r}
+rpart.rules(ctree)
+```
+
+R1: If Life Expectancy > 77 then HIGH INCOME (46/0/0/0)
+
+R2: If Life expectancy < 66 and Corruption level >0.75 and Export is less than 17mio~ then LOW INCOME (0/25/0/0) 
+
+R3: If Life expectancy < 66 and Corruption level >0.75 and Export is more than 17mio~ then LOW MIDDLE INCOME (0/1/6/0) 
+
+R4: If Life expectancy is in between 66 vs 77 and Corruption level >0.75 then LOW MIDDLE INCOME (0/4/18/5) 
+
+R5: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are East Asia & Pacific / Middle East & North Africa /South Asia and Export is more than 438mio then LOW MIDDLE INCOME (0/0/6/2) 
+
+R6: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are East Asia & Pacific / Middle East & North Africa /South Asia and Export is less than 438mio then UPPER MIDDLE INCOME (2/0/3/7) 
+
+R7: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are not East Asia & Pacific / Middle East & North Africa /South Asia and Export is less than 438mio then UPPER MIDDLE INCOME (6/0/6/27) 
+
+## Examine the complexity plot
+```{r}
+printcp(ctree)
+plotcp(ctree)
+```
+
+# Prediction
 ## Prediction in training dataset
 ```{r}
+# procedure in lecture notes
 predict_train<-predict(ctree)
 cl_train<-max.col(predict_train)
 table(cl_train,train$INCOME_GROUP)
 
-predict_train <- predict(ctree, train, type = 'class')
-table(train$INCOME_GROUP,predict_train)
+# simplified procedure
+predict_train2 <- predict(ctree, train, type = 'class')
+table(predict_train2,train$INCOME_GROUP)
 ```
 
 ## Prediction in testing dataset
 ```{r}
+# procedure in lecture notes
 predict_test<-predict(ctree,test) # out-sample
 cl_test<-max.col(predict_test)
 table(cl_test,test$INCOME_GROUP)
 
-predict_test <- predict(ctree,test, type = 'class')
-table(test$INCOME_GROUP,predict_test)
+# simplified procedure
+predict_test2 <- predict(ctree,test, type = 'class')
+table(predict_test2,test$INCOME_GROUP)
+```
+
+```{r}
+base_accuracy <- mean(predict_test2 == test$INCOME_GROUP)
+(base_accuracy)
+```
+
+## Improve classification tree by pruning
+
+### Prepruning
+```{r}
+# Grow a tree with minsplit of 100 and max depth of 8
+ctree_preprun <- rpart(INCOME_GROUP~
+               REGION+GDP +
+               LABOUR_FORCE +
+               LIFE_EXPECTANCY + 
+               MILITARY_EXPENSE +
+               HIGH_TECHNOLOGY_EXPORT +
+               CORRUPTION, data = train, method = "class", 
+                   control = rpart.control(cp = 0, maxdepth = 8,minsplit = 100))
+# Compute the accuracy of the pruned tree
+test$pred <- predict(ctree_preprun, test, type = "class")
+accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
+```
+
+### Postpruning
+```{r}
+# Prune the ctree_model based on the optimal cp value
+ctree_pruned <- prune(ctree, cp = 0.0046 )
+
+# Compute the accuracy of the pruned tree
+test$pred <- predict(ctree_pruned, test, type = "class")
+accuracy_postprun <- mean(test$pred == test$INCOME_GROUP)
+data.frame(base_accuracy, accuracy_preprun, accuracy_postprun)
 ```
 

@@ -1,0 +1,439 @@
+---
+title: "RMSC5001 Project 2018-2019 - Principal Component Analysis"
+author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka
+  Ming 1155104060
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '5'
+  html_document:
+    df_print: paged
+    highlight: pygments
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+>“I never had a problem reaching a decision based on imperfect information. That’s just the way the world works.” 
+>― *Alex Ferguson, Leading: Learning from Life and My Years at Manchester United*[^1]
+
+[^1]:  Leading: Learning from Life and My Years at Manchester United
+by Alex Ferguson, Michael Moritz (With). ISBN 9780316268080
+
+
+Legendary football manager Sir Alex Ferguson surely never had a problem in managing Manchester United from 1986 to 2013. However, for other clubs who try to win the English Premier League, they may have to rely on other insights to achieve this goal.
+
+Principal component analysis will be one of the keys to answer this question.
+
+Abstract
+
+1. Problem
++ What make a team win?
++ In what way some teams are better than the others?  
+
+2. Dataset description
++ The English Premier League (EPL) Season 2017-2018 statistics. It is downloaded from DataHub (https://datahub.io/sports-data/english-premier-league). Details of the dataset will be discussed below.
+
+3. Method to use
++ Principal component analysis.
+The reasons of using PCA can be summarized as follow:
+  i) The main idea is trying to capture as much information as possible while reducing the complexity of problems for easier analysis. Each principal component (PC) is a linear combination of the variables makes up a principal component. The loadings show the relative importance of the variable of each PC.
+  ii) Meaningful 2D plot can be made instead of handling fancy high dimenisonal plots.
+  iii) No need to define dependent variable or make assumption on underlying distribution of variables. It gives flexibility in analysis the problem.
+
+4. Findings
++ Home Team performance and number of foul plays are crucial in determining how clubs rank in the final standing.
+
+5. Conclusion
++ Principal componenet analysis can sort out the winning elements and help club managers to run their clubs.
+
+==================
+
+# Set Up
+## Library
+```{r load packages, message=FALSE, warning=FALSE}
+library(corrplot)
+library(ggplot2)
+library(ggthemes)
+library(tidyverse)
+library(zoo)
+library(factoextra)
+library(FactoMineR)
+library(knitr)
+```
+
+## Data field legend
+The season 2017-2018 statistics is downloaded from DataHub. These data contain the results of 380 EPL matches. There are total 22 variables with 12 variables measuring the team play statistics. Below is the descriptive information of the dataset.
+```{r echo=FALSE, results='asis'}
+field <- read.csv("field.csv")
+kable(field, caption = "Field information")
+```
+
+## Data exploration
+The EPL has 20 clubs and each club will play the others twice in the season, once at their home stadium and once at that of their opponents', for 38 games. Therefore the total number of records are 20 x 19 of 380 with 12 independent variables, which makes up 4,560 data points. The analysis can be easily extended to include other seasons. However, for simplicity, our study just use Season 2017 - 2018.
+
+Game play statistics are independent variables to explain the game, i.e. variance of the game, while the output are game results. Only variables from 11 to 23 are used for principal component analysis.
+Besides, the analysis is based on HomeTeam data. AwayTeam can be done in the same way.
+```{r}
+set.seed(123456)
+d <- read.csv("season-1718_csv.csv", stringsAsFactors = FALSE)
+d1 <- d %>%
+  group_by(HomeTeam) %>%
+  summarise(
+    HS = sum(HS),
+    AS = sum(AS),
+    HST = sum(HST),
+    AST = sum(AST),
+    HF = sum(HF),
+    AF = sum(AF),
+    HC = sum(HC),
+    AC = sum(AC),
+    HY = sum(HY),
+    AY = sum(AY),
+    HR = sum(HR),
+    AR = sum(AR)
+  )
+league.df <- column_to_rownames(d1, var = "HomeTeam")
+(league.df)
+summary(league.df)
+ggplot(stack(league.df), aes(x = ind, y = values)) +
+  geom_boxplot(fill = "#3d195b", colour = "red") +
+  labs(
+    x = "Variables",
+    y = "Values",
+    title = "Boxplot for 12 variables"
+  )
+```
+
+Some facts can be concluded from the boxplot:
+
+1. Home Team is more aggressive in attack. This is supported by higher Home Shot, Home Shot on Target and Home Corner values.
+2. Fouls are comparable between Home Team and Away Team.
+
+### Correlation plot
+```{r}
+r <- cor(league.df)
+corrplot.mixed(r, lower = "square", upper = "number", order = "FPC")
+```
+
+Some facts can be concluded from the correlation plot:
+
+1. The highest negative correlation -0.8 AS to HS. If one team controls the game, the attack is sereve and it can turn the opponent defensive.
+
+2. Shoot on Target will lead to more more Corner Kick, so AST is positively related to AC, with 0.81.
+
+3. Home Foul is negatively related to Home Shot, which can be interperted as better play with better sport manner.
+
+4. While Away Foul is not strongly correlated to other factors. Red Card factor is comparable between Home Team and Away Team, which can be interperted as Red Card is an event not related to attack or defence statistics, maybe it is more a referee related issue.
+
+5. All Home-related and Away-related factors are negatively correlated to each other, which is a resonable representation.
+
+# PCA
+For PCA, prcomp is used because according to literature[^2], prcomp uses singular value decomposition which is generally the preferred method for numerical accuracy.
+
+[^2]: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+
+## Summary of PCA
+```{r}
+pca <- prcomp(league.df, center = TRUE, scale = TRUE)
+summary(pca)
+```
+
+## PCA results
+### Scree Plot
+```{r}
+fviz_screeplot(pca, addlabels = TRUE, ylim = c(0, 50), 
+               main = "Screeplot of the first 10 PCs", 
+               barfill = "#3d195b", barcolor = "#3d195b")
+```
+
+The first five PCs explain 87.80% of total variance.
+
+### Quality of representation
+
+By the below plot, PCs beyond PC5 have little significance to the analysis.
+```{r}
+var <- get_pca_var(pca)
+corrplot(var$cos2, is.corr = FALSE, method = "square")
+# Total cos2 of variables on PC1 and PC2
+fviz_cos2(pca, choice = "var", axes = 1:2, 
+          title = "Sum of independent variables in PC1 and PC2", 
+          fill = "#3d195b", color = "#3d195b")
+```
+
+### Eignevalues analysis
+```{r}
+zapsmall(get_eigenvalue(pca))
+```
+
+Since the eigenvalues beyond PC5 are significantly less than 1, according to Kaiser Rule, which mean they are explaining less variance than one independent variable. Therefore, total 5 PCs will be used.
+
+### Contribution for loadings of each PC
+```{r}
+(zapsmall(var$contrib[, 1:5]))
+```
+
+The 1/12 of 8.125% level is represented by the red dash line.
+
+```{r}
+# Contributions of variables to PC1
+fviz_contrib(pca, choice = "var", axes = 1, top = 12, fill = "#3d195b")
+```
+
+PC1 is attacked related, as high loadings are Home Team Shots, Away Team Shots, Home Team Shots on Target, Away Team Shots on Target, Home Team Corners and Away Team Corners, which explains 49.10% of variance. It is reasonable as attack is the best way to win a game in soccer, so as to explaining the game.
+
+```{r}
+# Contributions of variables to PC2
+fviz_contrib(pca, choice = "var", axes = 2, top = 12, fill = "#3d195b")
+```
+
+PC2 is a referre statistics, which seems referre related issue since both Home and Away Team are involved in the statistics. Major contributions are Home Team Fouls Committed, Away Team Yellow Cards and Away Team Red Cards. PC3 explains 11.31% variance.
+
+```{r}
+# Contributions of variables to PC3
+fviz_contrib(pca, choice = "var", axes = 3, top = 12, fill = "#3d195b")
+```
+
+PC3 is Away Team foul play statistics. High loadings are Away Team Fouls Committed and Away Team Yellow Cards. PC3 explains 10.20% variance.
+
+```{r}
+# Contributions of variables to PC4
+fviz_contrib(pca, choice = "var", axes = 4, top = 12, fill = "#3d195b")
+```
+
+PC4 is Home Team Red Cards statistics. PC4 explains 8.87% variance.
+
+```{r}
+# Contributions of variables to PC5
+fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b")
+```
+
+PC5 seems representing Home Team Advantage. The reason is the loadings of Home Team Fouls Committed and Away Team Fouls Committed are similar, but Away Team Red Cards is much higher than Home Team Yellow Cards. PC5 explains 8.32% variance. The correlation circle in Section 4.1provides graphical repsentation of this PC.
+
+### Scatter plot
+```{r}
+score1 <- pca$x[, 1:5]
+pairs(score1)
+```
+
+# Findings
+## Correlation circle
+The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The representation of variables differs from the plot of the observations: The observations are represented by their projections, but the variables are represented by their correlations (Abdi and Williams 2010).
+```{r}
+fviz_pca_var(pca,
+  col.var = "cos2",
+  gradient.cols = c("black", "blue", "red"),
+  repel = TRUE # Avoid text overlapping
+)
+```
+
+From the plot, positive correlated variables will group together. 'Attack' attributes are grouped together.
+
+One interesting observation is home team fouls are positively related to yellow cards while negative related to red cards. Away teams are vice versa. This can be easily related to home advantage of field games. Referees may be more inclined to give minor punishment to home team while away teams have higher chance to get red cards for foul play. This is a strong support to PC5.
+
+## Quality and contribution
+```{r}
+fviz_contrib(pca, choice = "ind", axes = 1, fill = "#3d195b", title = "Total Contribution of clubs to PC1 to PC5")
+```
+
+## Biplot
+Biplot is a combination of row data to PCs.
+Biplot visualize the data by assigning the PC1 and PC2 to X and Y Axis of Scatter chart like below.
+```{r}
+fviz_pca_biplot(pca,
+  repel = TRUE,
+  col.var = "blue", # Variables color
+  col.ind = "#3d195b" # Individuals color
+)
+```
+Blue arrows start from origin are variables. Each club is shown as dot coming from the original rows.
+
+From the analysis, below are some major findings.
+
+1. Manchester City and Chelsea are high in PC1, which translated to good home performance. Final standings of Chelsea was 5 and Manchester City was the champion. So strong home performance is a must in winning the league.
+
+2. Low number in Foul can divide the club ranking. Left side clubs, Liverpool, Tottenham, Manchester City, Chelsea and Arsenal, are top 6 in final ranking. Manchester United seems an outliner in the elite group as it was the first runner-up but located at the middle of PC1. North-east region clubs, including West Bromwich Albion, Swansea City and Stoke City are high in PC2 which means more foul. Stoke City got high Home Yellow Cards too. Besides, these three teams are not good in both Home and Away attacks. According to the final ranking, these three teams performed worse and relegated in Season 2018-2019.
+
+## Loadings
+```{r}
+(Loadings <- pca$rotation[, 1:5] %>%
+  round(2) %>%
+  data.frame() %>%
+  mutate(Attribute = rownames(.)) %>%
+  select(Attribute, everything()) %>%
+  arrange(PC1))
+```
+
+## Plot time series of the Index by the clubs
+```{r}
+d$PC1 <- pca$x[, 1]
+d$PC2 <- pca$x[, 2]
+
+d %>%
+  ggplot() +
+  geom_line(aes(x = as.Date(Date), y = PC1, group = 1), show.legend = F, colour = "#3d195b") +
+  geom_hline(yintercept = 0, colour = "red") +
+  facet_wrap(~HomeTeam) +
+  labs(
+    x = "Date",
+    y = "PC1",
+    title = "PC1 time series by clubs"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_labels = "%Y (%b)")
+```
+
+Manchester City kept PC1 mean above 0 all the time.
+
+```{r}
+d %>%
+  ggplot() +
+  geom_line(aes(x = as.Date(Date), y = PC2, group = 1), show.legend = F, colour = "#3d195b") +
+  geom_hline(yintercept = 0, colour = "red") +
+  facet_wrap(~HomeTeam) +
+  labs(
+    x = "Date",
+    y = "PC2",
+    title = "PC2 time series by clubs"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_labels = "%Y (%b)")
+```
+
+## Mean of PC1 and PC2
+```{r}
+d %>%
+  group_by(HomeTeam) %>%
+  summarise(
+    Index.1 = mean(PC1),
+    Index.2 = mean(PC2)
+  ) %>%
+  arrange(desc(Index.1)) %>%
+  select(HomeTeam, Index.1, Index.2)
+```
+
+## Rolling mean of PC1 and PC2
+```{r}
+d %<>% group_by(HomeTeam) %>%
+  arrange(Date) %>%
+  mutate(
+    M.A.PC1 = rollmeanr(PC1, 15, fill = NA),
+    M.A.PC2 = rollmeanr(PC2, 15, fill = NA)
+  )
+
+Index.1718 <- d %>%
+  group_by(HomeTeam) %>%
+  filter(Date == max(Date)) %>%
+  select(HomeTeam, M.A.PC1, M.A.PC2, Date) %>%
+  arrange(M.A.PC1)
+
+ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
+  geom_point(show.legend = F, colour = "#3d195b", size = 5) +
+  geom_text(aes(label = HomeTeam),
+    check_overlap = TRUE, nudge_y = 0.08,
+    show.legend = F, size = 2.9
+  ) +
+  labs(x = "PC1", y = "PC2")
+```
+
+## Away Team Analysis
+For complete demonstration, Away Team PCA is carried out as below.
+```{r}
+d2 <- d %>%
+  group_by(AwayTeam) %>%
+  summarise(
+    HS = sum(HS),
+    AS = sum(AS),
+    HST = sum(HST),
+    AST = sum(AST),
+    HF = sum(HF),
+    AF = sum(AF),
+    HC = sum(HC),
+    AC = sum(AC),
+    HY = sum(HY),
+    AY = sum(AY),
+    HR = sum(HR),
+    AR = sum(AR)
+  )
+away.df <- column_to_rownames(d2, var = "AwayTeam")
+(away.df)
+summary(away.df)
+ggplot(stack(away.df), aes(x = ind, y = values)) +
+  geom_boxplot(fill = "#3d195b", colour = "red") +
+  labs(
+    x = "Variables",
+    y = "Values",
+    title = "Boxplot for 12 variables"
+  )
+pca2 <- prcomp(away.df, center = TRUE, scale = TRUE)
+summary(pca2)
+fviz_pca_var(pca2,
+  col.var = "cos2",
+  gradient.cols = c("black", "blue", "red"),
+  repel = TRUE # Avoid text overlapping
+)
+d$PC1a <- pca2$x[, 1]
+d$PC2a <- pca2$x[, 2]
+
+d %>%
+  ggplot() +
+  geom_line(aes(x = as.Date(Date), y = PC1a, group = 1), show.legend = F, colour = "#3d195b") +
+  geom_hline(yintercept = 0, colour = "red") +
+  facet_wrap(~HomeTeam) +
+  labs(
+    x = "Date",
+    y = "PC1a",
+    title = "PC1a time series by clubs (Away)"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_labels = "%Y (%b)")
+
+d %>%
+  ggplot() +
+  geom_line(aes(x = as.Date(Date), y = PC2a, group = 1), show.legend = F, colour = "#3d195b") +
+  geom_hline(yintercept = 0, colour = "red") +
+  facet_wrap(~AwayTeam) +
+  labs(
+    x = "Date",
+    y = "PC2a",
+    title = "PC2a time series by clubs (Away)"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_date(date_labels = "%Y (%b)")
+
+d %>%
+  group_by(AwayTeam) %>%
+  summarise(
+    Index.1 = mean(PC1a),
+    Index.2 = mean(PC2a)
+  ) %>%
+  arrange(desc(Index.1)) %>%
+  select(AwayTeam, Index.1, Index.2)
+```
+
+Huddersfield Town[^3] is an outliner. Final standing was not high but got good home performance. Part of the reasons maybe the turnaround matches in the League, which drew big clubs like Chelsea and Manchester United.
+
+[^3]: https://www.90min.com/posts/6063114-end-of-season-review-huddersfield-town-report-card-from-the-2017-18-campaign
+
+# Conclusion
+
+Principal componenet analysis can sort out the winning elements and help club managers to run their clubs.
+
+Principal component analysis can represent infomration in a lower dimension which can make analysis easier to handle and find out different aspects of factors. If analysers focus on first few PCs, they can make a model with better performance.
+
+# Reference
+
+1. Principal Component Analysis (PCA) 101, using R, Peter Nistrup, https://towardsdatascience.com/principal-component-analysis-pca-101-using-r-361f4c53a9ff
+2. Principal Component Analysis in R: prcomp vs princomp, Statistical tools for high-throughput data analysis, http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+3. How to rate the performance of a soccer team? An application of Principal Components Analysis, https://fcostartistician.wordpress.com/2017/05/22/how-to-rate-the-performance-of-a-soccer-team-an-application-of-principal-components-analysis/
+4. Principal Component Analysis (PCA) with FactoMineR(decathlon dataset)François Husson & Magalie Houée-Bigot,  http://factominer.free.fr/course/doc/RMarkdown_PCA_Decathlon.pdf

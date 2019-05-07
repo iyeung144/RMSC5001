@@ -1,7 +1,6 @@
 ---
 title: "RMSC5001 Project 2018-2019 - Classification Tree"
-author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka
-  Ming 1155104060
+author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka Ming 1155104060
 date: "`r Sys.Date()`"
 output:
   word_document:
@@ -22,6 +21,10 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 150)
+```
+
 # Introduction
 >“The world cannot be understood without numbers. But the world cannot be understood with numbers alone.”
 >― *Hans Rosling, Factfulness: Ten Reasons We're Wrong About the World—and Why Things Are Better Than You Think*[^1]
@@ -30,16 +33,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 When we were young, teachers often taught us the differences between developed and developing countries. The simplest way to define a country whether it is developed or developing is by GDP per capita. Since 2016, the World Bank is no longer distinguishing the term developed and developing. Instead, the World Bank classify countries by income: “low-income, lower-middle-income, upper-middle income and high-income economies”. Now we are interested to know which factors contribute to levels of income. We would like to have decision rules and a model to help us to determine the income group of countries.
 
-```{r set-options, echo=FALSE, cache=FALSE}
-options(width = 100)
-```
-
 # Set Up
 ## Library
 ```{r load packages, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(ggthemes)
 library(gridExtra)
+library(rworldmap)
 library(knitr)
 
 library(rpart)
@@ -67,54 +67,79 @@ kable(field, caption = "Field information")
 ## Data exploration
 ```{r read data}
 d <- read.csv("world.csv", header = TRUE)
-n<-nrow(d) # get sample size
+n <- nrow(d) # get sample size
 set.seed(12345) # set random seed
-r<-0.80 # set sampling ratio
-id<-sample(1:n,size=round(r*n)) # generate id
-train<-d[id,] # training dataset
-test<-d[-id,]
+r <- 0.80 # set sampling ratio
+id <- sample(1:n, size = round(r * n)) # generate id
+train <- d[id, ] # training dataset
+test <- d[-id, ]
 head(d)
+```
+
+## Different income levels around the World
+```{r world map}
+income.df <- joinCountryData2Map(d, 
+                                 joinCode = "NAME", 
+                                 nameJoinColumn = "COUNTRY")
+
+mapParams <- mapCountryData(income.df, 
+               nameColumnToPlot = "INCOME_GROUP", 
+               catMethod = "categorical", 
+               colourPalette = "diverging", 
+               addLegend='FALSE',
+               mapTitle = "Different Income Levels around the World")
+
+do.call(addMapLegendBoxes, 
+        c(mapParams, 
+          x = 'bottomleft', 
+          horiz = FALSE, 
+          title = "", 
+          bg = "NA", 
+          col = "NA"))
 ```
 
 ## Different income groups probability
 ```{r plot income group number}
 # All data
 prop.table(table(d$INCOME_GROUP))
-all_plot <- d[,-1] %>% 
-  count(INCOME_GROUP) %>% 
-  ggplot() + 
-  geom_col(aes(x=INCOME_GROUP, y=n), 
-           fill = "#002244", 
-           colour = "#002244") + 
+all_plot <- d[, -1] %>%
+  count(INCOME_GROUP) %>%
+  ggplot() +
+  geom_col(aes(x = INCOME_GROUP, y = n),
+    fill = "#002244",
+    colour = "#002244"
+  ) +
   ggtitle("Income group (All data)") +
   coord_flip() +
   theme_fivethirtyeight()
 
 # Training data
-prop.table(table(train$INCOME_GROUP)) 
-train_plot <- train[,-1] %>% 
-  count(INCOME_GROUP) %>% 
-  ggplot() + 
-  geom_col(aes(x=INCOME_GROUP, y=n), 
-           fill = "#002244", 
-           colour = "#002244") + 
+prop.table(table(train$INCOME_GROUP))
+train_plot <- train[, -1] %>%
+  count(INCOME_GROUP) %>%
+  ggplot() +
+  geom_col(aes(x = INCOME_GROUP, y = n),
+    fill = "#002244",
+    colour = "#002244"
+  ) +
   ggtitle("Income group (Training data)") +
   coord_flip() +
   theme_fivethirtyeight()
 
 # Testing data
 prop.table(table(test$INCOME_GROUP))
-test_plot <- test[,-1] %>% 
-  count(INCOME_GROUP) %>% 
-  ggplot() + 
-  geom_col(aes(x=INCOME_GROUP, y=n), 
-           fill = "#002244", 
-           colour = "#002244") + 
+test_plot <- test[, -1] %>%
+  count(INCOME_GROUP) %>%
+  ggplot() +
+  geom_col(aes(x = INCOME_GROUP, y = n),
+    fill = "#002244",
+    colour = "#002244"
+  ) +
   ggtitle("Income group (Testing data)") +
   coord_flip() +
   theme_fivethirtyeight()
 
-grid.arrange(all_plot, train_plot, test_plot, nrow=3, ncol=1)
+grid.arrange(all_plot, train_plot, test_plot, nrow = 3, ncol = 1)
 ```
 
 # Methodology
@@ -122,21 +147,22 @@ The classification tree was built based on the binary splitting of variables, on
 
 ## Classification Tree
 ```{r}
-ctree<-rpart(INCOME_GROUP~
-               REGION+GDP +
-               LABOUR_FORCE +
-               LIFE_EXPECTANCY + 
-               MILITARY_EXPENSE +
-               HIGH_TECHNOLOGY_EXPORT +
-               CORRUPTION,
-             data = train,
-             method = "class",
-             control = rpart.control(cp = 0))
+ctree <- rpart(INCOME_GROUP ~
+REGION + GDP +
+  LABOUR_FORCE +
+  LIFE_EXPECTANCY +
+  MILITARY_EXPENSE +
+  HIGH_TECHNOLOGY_EXPORT +
+  CORRUPTION,
+data = train,
+method = "class",
+control = rpart.control(cp = 0)
+)
 ```
 
 ## Plot Classification Tree
 ```{r}
-rpart.plot(ctree,extra=104)
+rpart.plot(ctree, extra = 104)
 ```
 
 ## Print Ctree
@@ -171,29 +197,32 @@ plotcp(ctree)
 
 # Prediction
 ## Prediction in training dataset
-```{r}
+```{r ,echo=FALSE, eval=FALSE}
 # procedure in lecture notes
-predict_train<-predict(ctree)
-cl_train<-max.col(predict_train)
-table(cl_train,train$INCOME_GROUP)
+predict_train <- predict(ctree)
+cl_train <- max.col(predict_train)
+table(cl_train, train$INCOME_GROUP)
+```
 
-# simplified procedure
-predict_train2 <- predict(ctree, train, type = 'class')
-table(predict_train2,train$INCOME_GROUP)
+```{r training prediction}
+predict_train2 <- predict(ctree, train, type = "class")
+table(predict_train2, train$INCOME_GROUP)
 ```
 
 ## Prediction in testing dataset
-```{r}
+```{r , echo=FALSE, eval=FALSE}
 # procedure in lecture notes
-predict_test<-predict(ctree,test) # out-sample
-cl_test<-max.col(predict_test)
-table(cl_test,test$INCOME_GROUP)
-
-# simplified procedure
-predict_test2 <- predict(ctree,test, type = 'class')
-table(predict_test2,test$INCOME_GROUP)
+predict_test <- predict(ctree, test) # out-sample
+cl_test <- max.col(predict_test)
+table(cl_test, test$INCOME_GROUP)
 ```
 
+```{r testing prediction}
+predict_test2 <- predict(ctree, test, type = "class")
+table(predict_test2, test$INCOME_GROUP)
+```
+
+## Accuracy
 ```{r}
 base_accuracy <- mean(predict_test2 == test$INCOME_GROUP)
 (base_accuracy)
@@ -204,14 +233,16 @@ base_accuracy <- mean(predict_test2 == test$INCOME_GROUP)
 ### Prepruning
 ```{r}
 # Grow a tree with minsplit of 100 and max depth of 8
-ctree_preprun <- rpart(INCOME_GROUP~
-               REGION+GDP +
-               LABOUR_FORCE +
-               LIFE_EXPECTANCY + 
-               MILITARY_EXPENSE +
-               HIGH_TECHNOLOGY_EXPORT +
-               CORRUPTION, data = train, method = "class", 
-                   control = rpart.control(cp = 0, maxdepth = 8,minsplit = 100))
+ctree_preprun <- rpart(INCOME_GROUP ~
+REGION + GDP +
+  LABOUR_FORCE +
+  LIFE_EXPECTANCY +
+  MILITARY_EXPENSE +
+  HIGH_TECHNOLOGY_EXPORT +
+  CORRUPTION,
+data = train, method = "class",
+control = rpart.control(cp = 0, maxdepth = 8, minsplit = 100)
+)
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_preprun, test, type = "class")
 accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
@@ -220,7 +251,7 @@ accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
 ### Postpruning
 ```{r}
 # Prune the ctree_model based on the optimal cp value
-ctree_pruned <- prune(ctree, cp = 0.0046 )
+ctree_pruned <- prune(ctree, cp = 0.0046)
 
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_pruned, test, type = "class")

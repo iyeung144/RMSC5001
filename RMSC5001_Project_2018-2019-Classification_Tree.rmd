@@ -50,8 +50,7 @@ library(tidyverse)
 ```
 
 ## Dataset
-We extracted total 1416 data from World Bank Database which cover dependent variable of region, GDP, labor force, life expectancy, military expense, high technology export and corruption for 177 countries. Some data are missing as military expense, high technology export data and corruption are unknown for some countries in the World Bank database. We have removed countries name to simplify the dataset .We have used income group as the target variable. There are 4 different income groups as prediction results.
-All the data are retrieved from the World Bank database[^2].
+We extracted data which cover dependent variable of region, GDP, labor force, life expectancy, military expense, high technology export and corruption for total 177 countries. Some data are missing as military expense, high technology export data and corruption are unknown for some countries in the World Bank database. We have modified them as zero to setup usable dataset for our case study. We have used income group as the target variable. There are 4 different income groups as prediction results. All the data are retrieved from the World Bank database[^2].
 
 [^2]: https://databank.worldbank.org/data/home.aspx
 
@@ -143,6 +142,7 @@ grid.arrange(all_plot, train_plot, test_plot, nrow = 3, ncol = 1)
 ```
 
 # Methodology
+Classification is a predictive model .The main use is to utilize the data we have and identity the relevant factors hence classify the out-sample data into correct group and classes. 
 The classification tree was built based on the binary splitting of variables, one at a time. The tree is constructed such that each terminal node is as “pure” as possible. That is, in each terminal node, most of the observations are belongs to the same group. Once the classification tree is built, a set of simple classification rules can be easily obtained. Since this method will search for all possible binary splitting of the variables, it is computational intensive and may be time consuming.
 
 ## Classification Tree
@@ -161,36 +161,57 @@ control = rpart.control(cp = 0)
 ```
 
 ## Plot Classification Tree
+### Classification Tree in Percentage
 ```{r}
 rpart.plot(ctree, extra = 104)
 ```
 
-## Print Ctree
+### Classification Tree in Numbers
+```{r}
+rpart.plot(ctree, extra = 101)
+```
+
+## Print classification Tree
 ```{r}
 print(ctree)
 ```
+
+### Classification tree discussion
+Among of 7 variables we input into the model, only 4 were selected by the classification tree. It is not hard to see life expectancy is the key variable that to determine whether a country is high or low-income economy. The first two terminal nodes (with high-income and low-income label) are very straight forward and easy to identify. Due to these two group are the extreme one, it is easy to explain with selected variable(s). 30% of the population (data) directly go to the 1st terminal node with label of high-income group. It is determined by just 1 variable - life expectancy >=77. Although there are some misclassifications for upper middle-income economies to the high-income economies, think logically, people in a higher-income economy always have longer life due to better standard of living. The 2nd terminal node with label of low-income account for 15% of population. It is also clear cut that when all the negative factors appeared at once (corruption is high, life expectancy is short, and technology is poor), it goes straight to low-income economy. Again, there are some misclassification for lower middle-income economies to low-income economies. Both terminal nodes have a very high confidence (low error rate). The rest of the population (~55%) were distributed in 6 terminal nodes with the label of lower/upper-middle income. The error rate is quite high (>20%). It may due to the reason that the selected factors are not significant to define the income group in the middle range.
 
 ## Decision Rule:
 ```{r}
 rpart.rules(ctree)
 ```
 
-R1: If Life Expectancy > 77 then HIGH INCOME (46/0/0/0)
+From above result, we can conclude total 8 significant classification paths as below :
 
-R2: If Life expectancy < 66 and Corruption level >0.75 and Export is less than 17mio~ then LOW INCOME (0/25/0/0) 
+R1: If Life Expectancy > 77 then HIGH INCOME (35/0/0/7)
 
-R3: If Life expectancy < 66 and Corruption level >0.75 and Export is more than 17mio~ then LOW MIDDLE INCOME (0/1/6/0) 
+R2: If Life expectancy < 66 and Corruption level >0.75 and Export is less than 9.45 million then LOW INCOME (0/18/4/0)
 
-R4: If Life expectancy is in between 66 vs 77 and Corruption level >0.75 then LOW MIDDLE INCOME (0/4/18/5) 
+R3: If Life expectancy < 66 and Corruption level >0.75 and Export is more than 9.45million then LOW MIDDLE INCOME (0/3/4/0)
 
-R5: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are East Asia & Pacific / Middle East & North Africa /South Asia and Export is more than 438mio then LOW MIDDLE INCOME (0/0/6/2) 
+R4: If Life expectancy is < 74  , Corruption level >0.75 and export is more than 18 million then LOW MIDDLE INCOME (0/0/7/3)
 
-R6: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are East Asia & Pacific / Middle East & North Africa /South Asia and Export is less than 438mio then UPPER MIDDLE INCOME (2/0/3/7) 
+R5: If Life Expectancy is in between 66 vs 77 and Corruption level >0. 75 and  Labor force is more than 356,510 then LOW MIDDLE INCOME (0/4/12/0)
 
-R7: If Life Expectancy < 77 and Corruption level < 0. 75 and Region are not East Asia & Pacific / Middle East & North Africa /South Asia and Export is less than 438mio then UPPER MIDDLE INCOME (6/0/6/27) 
+R6: If Life Expectancy is in between 66 vs 77 and Corruption level >0. 75 and  Labor force is less than 356,510 then UPPER MIDDLE INCOME (0/0/3/4)
 
-## Examine the complexity plot
-```{r}
+R7: If Life expectancy is between 74 vs 77  , Corruption level >0.75 then UPPER MIDDLE INCOME (5/0/3/17)
+
+R8: If Life Expectancy is < 74 and Corruption level < 0. 75 and export level is less than 18 million then UPPER MIDDLE INCOME (0/0/3/10)
+
+## Support, Confident and Capture of the Classification Tree
+```{r rule results, echo=FALSE, results='asis'}
+rule.results <- read.csv("rule_results.csv")
+kable(rule.results, caption = "Classification Tree Explanatory Power")
+```
+
+Rule 1 and 2 have better predictive power with more than 80% confident level.
+
+## Investigate the complexity plot
+```{r tree complexity}
 printcp(ctree)
 plotcp(ctree)
 ```

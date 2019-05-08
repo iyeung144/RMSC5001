@@ -1,12 +1,8 @@
 ---
 title: "RMSC5001 Project 2018-2019 - Principal Component Analysis"
-author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka
-  Ming 1155104060
+author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka Ming 1155104060
 date: "`r Sys.Date()`"
 output:
-  word_document:
-    toc: yes
-    toc_depth: '5'
   html_document:
     df_print: paged
     highlight: pygments
@@ -15,11 +11,14 @@ output:
     toc: yes
     toc_depth: 5
     toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '5'
 always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, fig.width = 7)
 ```
 
 # Introduction
@@ -138,7 +137,12 @@ Some facts can be concluded from the correlation plot:
 
 5. All Home-related and Away-related factors are negatively correlated to each other, which is a resonable representation.
 
-# PCA
+# Methodology
+The theory behind principal component analysis (PCA) is to reduce the
+dimensionality of a data set consisting of a large number of correlated variables, while preserving as much as information present in
+the data set. To achieve this goal, a new set of variables,
+the principal components (PCs), are constructed by transforming from the original variables. The PCs are uncorrelated and sorted by the highest variance explained  to the lowest. To illustrate, if there are 5 PCs, PC1 will be the first principal component that explained the most variance of the original variables' covariance matrix.
+
 For PCA, prcomp is used because according to literature[^2], prcomp uses singular value decomposition which is generally the preferred method for numerical accuracy.
 
 [^2]: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
@@ -152,9 +156,11 @@ summary(pca)
 ## PCA results
 ### Scree Plot
 ```{r}
-fviz_screeplot(pca, addlabels = TRUE, ylim = c(0, 50), 
-               main = "Screeplot of the first 10 PCs", 
-               barfill = "#3d195b", barcolor = "#3d195b")
+fviz_screeplot(pca,
+  addlabels = TRUE, ylim = c(0, 50),
+  main = "Screeplot of the first 10 PCs",
+  barfill = "#3d195b", barcolor = "#3d195b"
+)
 ```
 
 The first five PCs explain 87.80% of total variance.
@@ -166,9 +172,11 @@ By the below plot, PCs beyond PC5 have little significance to the analysis.
 var <- get_pca_var(pca)
 corrplot(var$cos2, is.corr = FALSE, method = "square")
 # Total cos2 of variables on PC1 and PC2
-fviz_cos2(pca, choice = "var", axes = 1:2, 
-          title = "Sum of independent variables in PC1 and PC2", 
-          fill = "#3d195b", color = "#3d195b")
+fviz_cos2(pca,
+  choice = "var", axes = 1:2,
+  title = "Sum of independent variables in PC1 and PC2",
+  fill = "#3d195b", color = "#3d195b"
+)
 ```
 
 ### Eignevalues analysis
@@ -187,35 +195,35 @@ The 1/12 of 8.125% level is represented by the red dash line.
 
 ```{r}
 # Contributions of variables to PC1
-fviz_contrib(pca, choice = "var", axes = 1, top = 12, fill = "#3d195b")
+fviz_contrib(pca, choice = "var", axes = 1, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC1 is attacked related, as high loadings are Home Team Shots, Away Team Shots, Home Team Shots on Target, Away Team Shots on Target, Home Team Corners and Away Team Corners, which explains 49.10% of variance. It is reasonable as attack is the best way to win a game in soccer, so as to explaining the game.
 
 ```{r}
 # Contributions of variables to PC2
-fviz_contrib(pca, choice = "var", axes = 2, top = 12, fill = "#3d195b")
+fviz_contrib(pca, choice = "var", axes = 2, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC2 is a referre statistics, which seems referre related issue since both Home and Away Team are involved in the statistics. Major contributions are Home Team Fouls Committed, Away Team Yellow Cards and Away Team Red Cards. PC3 explains 11.31% variance.
 
 ```{r}
 # Contributions of variables to PC3
-fviz_contrib(pca, choice = "var", axes = 3, top = 12, fill = "#3d195b")
+fviz_contrib(pca, choice = "var", axes = 3, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC3 is Away Team foul play statistics. High loadings are Away Team Fouls Committed and Away Team Yellow Cards. PC3 explains 10.20% variance.
 
 ```{r}
 # Contributions of variables to PC4
-fviz_contrib(pca, choice = "var", axes = 4, top = 12, fill = "#3d195b")
+fviz_contrib(pca, choice = "var", axes = 4, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC4 is Home Team Red Cards statistics. PC4 explains 8.87% variance.
 
 ```{r}
 # Contributions of variables to PC5
-fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b")
+fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC5 seems representing Home Team Advantage. The reason is the loadings of Home Team Fouls Committed and Away Team Fouls Committed are similar, but Away Team Red Cards is much higher than Home Team Yellow Cards. PC5 explains 8.32% variance. The correlation circle in Section 4.1provides graphical repsentation of this PC.
@@ -242,8 +250,43 @@ From the plot, positive correlated variables will group together. 'Attack' attri
 One interesting observation is home team fouls are positively related to yellow cards while negative related to red cards. Away teams are vice versa. This can be easily related to home advantage of field games. Referees may be more inclined to give minor punishment to home team while away teams have higher chance to get red cards for foul play. This is a strong support to PC5.
 
 ## Quality and contribution
+Below is a series of plots showing each club contribution in PCs
 ```{r}
-fviz_contrib(pca, choice = "ind", axes = 1, fill = "#3d195b", title = "Total Contribution of clubs to PC1 to PC5")
+fviz_contrib(pca,
+  choice = "ind",
+  axes = 1,
+  fill = "#3d195b",
+  color = "#3d195b",
+  title = "Total Contribution of clubs to PC1"
+)
+fviz_contrib(pca,
+  choice = "ind",
+  axes = 2,
+  fill = "#3d195b",
+  color = "#3d195b",
+  title = "Total Contribution of clubs to PC2"
+)
+fviz_contrib(pca,
+  choice = "ind",
+  axes = 3,
+  fill = "#3d195b",
+  color = "#3d195b",
+  title = "Total Contribution of clubs to PC3"
+)
+fviz_contrib(pca,
+  choice = "ind",
+  axes = 4,
+  fill = "#3d195b",
+  color = "#3d195b",
+  title = "Total Contribution of clubs to PC4"
+)
+fviz_contrib(pca,
+  choice = "ind",
+  axes = 5,
+  fill = "#3d195b",
+  color = "#3d195b",
+  title = "Total Contribution of clubs to PC5"
+)
 ```
 
 ## Biplot
@@ -426,14 +469,15 @@ Huddersfield Town[^3] is an outliner. Final standing was not high but got good h
 [^3]: https://www.90min.com/posts/6063114-end-of-season-review-huddersfield-town-report-card-from-the-2017-18-campaign
 
 # Conclusion
-
 Principal componenet analysis can sort out the winning elements and help club managers to run their clubs.
 
 Principal component analysis can represent infomration in a lower dimension which can make analysis easier to handle and find out different aspects of factors. If analysers focus on first few PCs, they can make a model with better performance.
 
 # Reference
+1. Applied Multivariate Statistical Analysis, 5th ed., Richard Johnson and Dean Wichern, Prentice Hall. 
+2. Principal Component Analysis (PCA) 101, using R, Peter Nistrup, https://towardsdatascience.com/principal-component-analysis-pca-101-using-r-361f4c53a9ff
+3. Principal Component Analysis in R: prcomp vs princomp, Statistical tools for high-throughput data analysis, http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+4. How to rate the performance of a soccer team? An application of Principal Components Analysis, https://fcostartistician.wordpress.com/2017/05/22/how-to-rate-the-performance-of-a-soccer-team-an-application-of-principal-components-analysis/
+5. Principal Component Analysis (PCA) with FactoMineR(decathlon dataset)François Husson & Magalie Houée-Bigot,  http://factominer.free.fr/course/doc/RMarkdown_PCA_Decathlon.pdf
 
-1. Principal Component Analysis (PCA) 101, using R, Peter Nistrup, https://towardsdatascience.com/principal-component-analysis-pca-101-using-r-361f4c53a9ff
-2. Principal Component Analysis in R: prcomp vs princomp, Statistical tools for high-throughput data analysis, http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
-3. How to rate the performance of a soccer team? An application of Principal Components Analysis, https://fcostartistician.wordpress.com/2017/05/22/how-to-rate-the-performance-of-a-soccer-team-an-application-of-principal-components-analysis/
-4. Principal Component Analysis (PCA) with FactoMineR(decathlon dataset)François Husson & Magalie Houée-Bigot,  http://factominer.free.fr/course/doc/RMarkdown_PCA_Decathlon.pdf
+6. Principal Component Analysis, 2nd ed., I.T. Jolliffe, Springer.

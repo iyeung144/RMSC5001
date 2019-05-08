@@ -18,7 +18,7 @@ always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, fig.width = 7)
 ```
 
 ```{r set-options, echo=FALSE, cache=FALSE}
@@ -35,6 +35,7 @@ When we were young, teachers often taught us the differences between developed a
 
 # Set Up
 ## Library
+
 ```{r load packages, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(ggthemes)
@@ -44,8 +45,6 @@ library(knitr)
 
 library(rpart)
 library(rpart.plot)
-library(rattle)
-library(party)
 library(tidyverse)
 ```
 
@@ -55,6 +54,7 @@ We extracted data which cover dependent variable of region, GDP, labor force, li
 [^2]: https://databank.worldbank.org/data/home.aspx
 
 ## Data field legend
+
 ```{r data field, echo=FALSE, results='asis'}
 income <- read.csv("worldbank_income.csv")
 kable(income, caption = "World Bank definition on the income group")
@@ -64,6 +64,7 @@ kable(field, caption = "Field information")
 ```
 
 ## Data exploration
+
 ```{r read data}
 d <- read.csv("world.csv", header = TRUE)
 n <- nrow(d) # get sample size
@@ -76,28 +77,35 @@ head(d)
 ```
 
 ## Different income levels around the World
+
 ```{r world map}
-income.df <- joinCountryData2Map(d, 
-                                 joinCode = "NAME", 
-                                 nameJoinColumn = "COUNTRY")
+income.df <- joinCountryData2Map(d,
+  joinCode = "NAME",
+  nameJoinColumn = "COUNTRY"
+)
 
-mapParams <- mapCountryData(income.df, 
-               nameColumnToPlot = "INCOME_GROUP", 
-               catMethod = "categorical", 
-               colourPalette = "diverging", 
-               addLegend='FALSE',
-               mapTitle = "Different Income Levels around the World")
+mapParams <- mapCountryData(income.df,
+  nameColumnToPlot = "INCOME_GROUP",
+  catMethod = "categorical",
+  colourPalette = "diverging",
+  addLegend = "FALSE",
+  mapTitle = "Different Income Levels around the World"
+)
 
-do.call(addMapLegendBoxes, 
-        c(mapParams, 
-          x = 'bottomleft', 
-          horiz = FALSE, 
-          title = "", 
-          bg = "NA", 
-          col = "NA"))
+do.call(
+  addMapLegendBoxes,
+  c(mapParams,
+    x = "bottomleft",
+    horiz = FALSE,
+    title = "",
+    bg = "NA",
+    col = "NA"
+  )
+)
 ```
 
 ## Different income groups probability
+
 ```{r plot income group number}
 # All data
 prop.table(table(d$INCOME_GROUP))
@@ -146,6 +154,7 @@ Classification is a predictive model .The main use is to utilize the data we hav
 The classification tree was built based on the binary splitting of variables, one at a time. The tree is constructed such that each terminal node is as “pure” as possible. That is, in each terminal node, most of the observations are belongs to the same group. Once the classification tree is built, a set of simple classification rules can be easily obtained. Since this method will search for all possible binary splitting of the variables, it is computational intensive and may be time consuming.
 
 ## Classification Tree
+
 ```{r}
 ctree <- rpart(INCOME_GROUP ~
 REGION + GDP +
@@ -162,16 +171,19 @@ control = rpart.control(cp = 0)
 
 ## Plot Classification Tree
 ### Classification Tree in Percentage
+
 ```{r}
 rpart.plot(ctree, extra = 104)
 ```
 
 ### Classification Tree in Numbers
+
 ```{r}
 rpart.plot(ctree, extra = 101)
 ```
 
 ## Print classification Tree
+
 ```{r}
 print(ctree)
 ```
@@ -179,7 +191,8 @@ print(ctree)
 ### Classification tree discussion
 Among of 7 variables we input into the model, only 4 were selected by the classification tree. It is not hard to see life expectancy is the key variable that to determine whether a country is high or low-income economy. The first two terminal nodes (with high-income and low-income label) are very straight forward and easy to identify. Due to these two group are the extreme one, it is easy to explain with selected variable(s). 30% of the population (data) directly go to the 1st terminal node with label of high-income group. It is determined by just 1 variable - life expectancy >=77. Although there are some misclassifications for upper middle-income economies to the high-income economies, think logically, people in a higher-income economy always have longer life due to better standard of living. The 2nd terminal node with label of low-income account for 15% of population. It is also clear cut that when all the negative factors appeared at once (corruption is high, life expectancy is short, and technology is poor), it goes straight to low-income economy. Again, there are some misclassification for lower middle-income economies to low-income economies. Both terminal nodes have a very high confidence (low error rate). The rest of the population (~55%) were distributed in 6 terminal nodes with the label of lower/upper-middle income. The error rate is quite high (>20%). It may due to the reason that the selected factors are not significant to define the income group in the middle range.
 
-## Decision Rule:
+## Decision Rule
+
 ```{r}
 rpart.rules(ctree)
 ```
@@ -203,6 +216,7 @@ R7: If Life expectancy is between 74 vs 77  , Corruption level >0.75 then UPPER 
 R8: If Life Expectancy is < 74 and Corruption level < 0. 75 and export level is less than 18 million then UPPER MIDDLE INCOME (0/0/3/10)
 
 ## Support, Confident and Capture of the Classification Tree
+
 ```{r rule results, echo=FALSE, results='asis'}
 rule.results <- read.csv("rule_results.csv")
 kable(rule.results, caption = "Classification Tree Explanatory Power")
@@ -211,13 +225,17 @@ kable(rule.results, caption = "Classification Tree Explanatory Power")
 Rule 1 and 2 have better predictive power with more than 80% confident level.
 
 ## Investigate the complexity plot
+
 ```{r tree complexity}
 printcp(ctree)
 plotcp(ctree)
 ```
 
+Cost-complexity is minimum at 0.046.
+
 # Prediction
 ## Prediction in training dataset
+
 ```{r ,echo=FALSE, eval=FALSE}
 # procedure in lecture notes
 predict_train <- predict(ctree)
@@ -231,6 +249,7 @@ table(predict_train2, train$INCOME_GROUP)
 ```
 
 ## Prediction in testing dataset
+
 ```{r , echo=FALSE, eval=FALSE}
 # procedure in lecture notes
 predict_test <- predict(ctree, test) # out-sample
@@ -244,14 +263,40 @@ table(predict_test2, test$INCOME_GROUP)
 ```
 
 ## Accuracy
+
 ```{r}
 base_accuracy <- mean(predict_test2 == test$INCOME_GROUP)
 (base_accuracy)
 ```
 
-## Improve classification tree by pruning
+## Discussion on the predictions
+The file “world.csv” contains the information about the income level of 177 countries. We randomly sampled 142 countries (about 80%) as our training data and remaining 35 countries as testing data.
+From the training set, there is 35 countries correctly classified as HIGH INCOME, 18 countries are LOW INCOME, 23 countries are LOWER MIDDLE INCOME and 31 countries are UPPER MIDDLE INCOME. 
+There are total 35 errors (7+4+10+14) out of 142 countries in the training dataset, the error rate is 35/142=24.65% .
+If we adopt this model, we will have optimistic prediction that more countries are wealthy in the world
 
-### Prepruning
+```{r train prediction, echo=FALSE, results='asis'}
+prediction.training <- read.csv("prediction_training.csv")
+kable(prediction.training, caption = "Results on the prediction of training data")
+```
+
+For testing data, the error rate is 11/35 = 31.42% .The proportion of income group from overall prediction is same as training set. However the accurate prediction focused on HIGH and LOW INCOME classification. Model correctly captured all 5 LOW INCOME countries.
+
+```{r test prediction, echo=FALSE, results='asis'}
+prediction.testing <- read.csv("prediction_testing.csv")
+kable(prediction.testing, caption = "Results on the prediction of training data")
+```
+
+Since the error rate of the testing data is 27 % greater than the training data, there might be a chance that the model is over fitted. The rules selected from the model is used to fit the outlier / noise of the training dataset instead of market data.  The predictive power will be weaken. 
+To better valuate the model efficiency and minimize error rate, we may increase the sample size. Unfortunately there is insufficient data on market (No. of countries) for us to collect and consolidate.  
+
+# Improving accuracy by pruning
+
+Although decision tree mehtod is easy to understand, but a deep and large tree is difficult to interperate. Overly branched trees are from the noise of training data. As long as the tree growing algorithm tries to reduce classification error, some rules provide little predictive value for testing data and overfitting will occur. Purning is for solving this issue. Pruning reduces size of tree, create a less complex tree and ultimately preventing overfitting.
+
+### Pre-pruning
+Pre-pruning sets a termination condition and stop growing prematurely. Pros is a less complex tree. Cons are oversimplited trees or too complex trees if condition is not set correctly. Methods for pre-pruning includes "minimum number of object pruning" and "Chi-square purning".
+
 ```{r}
 # Grow a tree with minsplit of 100 and max depth of 8
 ctree_preprun <- rpart(INCOME_GROUP ~
@@ -262,17 +307,20 @@ REGION + GDP +
   HIGH_TECHNOLOGY_EXPORT +
   CORRUPTION,
 data = train, method = "class",
-control = rpart.control(cp = 0, maxdepth = 8, minsplit = 100)
+control = rpart.control(cp = 0, maxdepth = 3, minsplit = 20)
 )
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_preprun, test, type = "class")
 accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
 ```
 
-### Postpruning
+### Post-pruning
+Post-pruning is based on an uncontrolled tree. Then an optimal tree is generated by various methods, including "cost based pruning", "minimum error pruning", "error complexity pruning" and "reduced error pruning". Cost-complexity prunings of a tree is performed for this demonstration. It is based on the geometric means of the intervals of values of cost-complexity for which a pruning is optimal, a cross-validation has been done in the initial construction by rpart.
+From Section 3.6, the minimum of cost-complexity is 0.046.
+
 ```{r}
 # Prune the ctree_model based on the optimal cp value
-ctree_pruned <- prune(ctree, cp = 0.0046)
+ctree_pruned <- prune(ctree, cp = 0.046)
 
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_pruned, test, type = "class")
@@ -280,3 +328,25 @@ accuracy_postprun <- mean(test$pred == test$INCOME_GROUP)
 data.frame(base_accuracy, accuracy_preprun, accuracy_postprun)
 ```
 
+# Conclusion
+Not like the Binary Logistic regression and multinomial model, Classification Tree method is easy to be understood by ordinary people. Classification Tree method generate a set of simple rules that can applied to classify samples. 
+In this project, the prediction is not as good as we thought. The error rates are quite high on both training and testing dataset. We tried to figure out why it is happened and came out a few comments below:
+
+1.	Variable selection: We have used 7 variables in this project and those variables are picked by our own knowledge and subject to data availability. Some important factors may be omitted and the creation of the classification rule and threshold will be interrupted. For example schooling and Literacy could be main factors to reflect the society income level however no relevant dataset is available online. 
+
+2.	Completeness of data:  We have used a few dataset to modify our model but some data are still missing for the picked variables (i.e. military expense, technology exporting, and corruption). It may cause estimation problem as we have updated the blank as zero.  It is affecting the accuracy of classification. 
+
+3.	Reliability of Data: We retrieved data from a reliable data vendor. However there is no way to verify correctness. World Bank collected data from corresponding countries but there is incentive for countries to mislead public by providing incorrect information. Thus it is hard to identity their living standard (income level) by pure 7 variables without flaw.
+
+4.	Limitation of applying statistical program: We build the classification tree using R. R has its own built-in logic and expectations which is difficult to accommodate all scenario and problems in the world. Tools apply logical decision while there may have contradictions or exceptions for complex classifications across the world. Therefore it may lead to error. 
+
+5.  Because of the tree size and complexity of data, the original tree and post-pruning tree procduces the same accuracy, while the pre-pruning tree improved by reducing level of tree.
+
+6.  Besides, from our study shows that Rule 1 and 2 have better predictive power with more than 80% confident level. Defining a country not just by a single GDP figure, other factors including labour force, life expectancy, military expense, high technology export and corruption level contribute to the level of income of different countries.
+
+# Reference
+1. Applied Multivariate Statistical Analysis, 5 th ed., Richard Johnson and Dean Wichern, Prentice Hall.
+
+2. Plotting rpart trees with the rpart.plot package (Stephen Milborrow 2018)
+
+3. Study of Various Decision Tree Pruning Methods with their Empirical Comparison in WEKA. (Patel and Upadhyay 2012)

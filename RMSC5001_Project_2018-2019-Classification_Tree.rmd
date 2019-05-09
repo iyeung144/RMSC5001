@@ -294,6 +294,18 @@ To better valuate the model efficiency and minimize error rate, we may increase 
 
 Although decision tree mehtod is easy to understand, but a deep and large tree is difficult to interperate. Overly branched trees are from the noise of training data. As long as the tree growing algorithm tries to reduce classification error, some rules provide little predictive value for testing data and overfitting will occur. Purning is for solving this issue. Pruning reduces size of tree, create a less complex tree and ultimately preventing overfitting.
 
+There are two ways for pruning:
+
+1. Pre-pruning
+2. Post-pruning
+
+Our study focuses on post-pruning technique of cost-complexity pruning.
+
+In R, Cost-complexity pruning proposed by Breiman et al. (1984) can be carried out easily. This algorithm is originally relied on making a compromise of the tree size complexity and the overfitting penalty of error rate. As a result, a smaller tree will concluded with a higher error rate. The cost complexity of a tree T is defined as
+\begin{equation*} {CC}(T) = {R}(T) + \alpha |T| \end{equation*}
+
+where R(T) is error rate, |T| is the number of end nodes on T, and the cost of each end node is represented by the complexity parameter $\alpha $. For a level response variable, R(T) is used for the misclassification rate; for a continuous response variable, the sum of square errors (SSE), is used for the error rate. To conclude, evaluating cost complexity (cp) is by the training dataset only. 
+
 ### Pre-pruning
 Pre-pruning sets a termination condition and stop growing prematurely. Pros is a less complex tree. Cons are oversimplited trees or too complex trees if condition is not set correctly. Methods for pre-pruning includes "minimum number of object pruning" and "Chi-square purning".
 
@@ -350,3 +362,7 @@ In this project, the prediction is not as good as we thought. The error rates ar
 2. Plotting rpart trees with the rpart.plot package (Stephen Milborrow 2018)
 
 3. Study of Various Decision Tree Pruning Methods with their Empirical Comparison in WEKA. (Patel and Upadhyay 2012)
+
+4. How to Grow and Prune a Classification Tree. http://www.ams.org/publicoutreach/feature-column/fc-2014-12
+
+5. Breiman, L., Friedman, J., Olshen, R. A., and Stone, C. J. (1984). Classification and Regression Trees. Belmont, CA: Wadsworth. 

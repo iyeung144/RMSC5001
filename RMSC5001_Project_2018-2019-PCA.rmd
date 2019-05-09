@@ -3,6 +3,9 @@ title: "RMSC5001 Project 2018-2019 - Principal Component Analysis"
 author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka Ming 1155104060
 date: "`r Sys.Date()`"
 output:
+  word_document:
+    toc: yes
+    toc_depth: '5'
   html_document:
     df_print: paged
     highlight: pygments
@@ -11,9 +14,6 @@ output:
     toc: yes
     toc_depth: 5
     toc_float: yes
-  word_document:
-    toc: yes
-    toc_depth: '5'
 always_allow_html: yes
 ---
 
@@ -83,7 +83,7 @@ The EPL has 20 clubs and each club will play the others twice in the season, onc
 
 Game play statistics are independent variables to explain the game, i.e. variance of the game, while the output are game results. Only variables from 11 to 23 are used for principal component analysis.
 Besides, the analysis is based on HomeTeam data. AwayTeam can be done in the same way.
-```{r}
+```{r read data}
 set.seed(123456)
 d <- read.csv("season-1718_csv.csv", stringsAsFactors = FALSE)
 d1 <- d %>%
@@ -120,7 +120,7 @@ Some facts can be concluded from the boxplot:
 2. Fouls are comparable between Home Team and Away Team.
 
 ### Correlation plot
-```{r}
+```{r correlation plot}
 r <- cor(league.df)
 corrplot.mixed(r, lower = "square", upper = "number", order = "FPC")
 ```
@@ -148,14 +148,14 @@ For PCA, prcomp is used because according to literature[^2], prcomp uses singula
 [^2]: http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
 
 ## Summary of PCA
-```{r}
+```{r pca}
 pca <- prcomp(league.df, center = TRUE, scale = TRUE)
 summary(pca)
 ```
 
 ## PCA results
 ### Scree Plot
-```{r}
+```{r scree plot}
 fviz_screeplot(pca,
   addlabels = TRUE, ylim = c(0, 50),
   main = "Screeplot of the first 10 PCs",
@@ -168,7 +168,7 @@ The first five PCs explain 87.80% of total variance.
 ### Quality of representation
 
 By the below plot, PCs beyond PC5 have little significance to the analysis.
-```{r}
+```{r pca variance}
 var <- get_pca_var(pca)
 corrplot(var$cos2, is.corr = FALSE, method = "square")
 # Total cos2 of variables on PC1 and PC2
@@ -180,48 +180,48 @@ fviz_cos2(pca,
 ```
 
 ### Eignevalues analysis
-```{r}
+```{r eigenvalues analysis}
 zapsmall(get_eigenvalue(pca))
 ```
 
 Since the eigenvalues beyond PC5 are significantly less than 1, according to Kaiser Rule, which mean they are explaining less variance than one independent variable. Therefore, total 5 PCs will be used.
 
 ### Contribution for loadings of each PC
-```{r}
+```{r loadings of pc}
 (zapsmall(var$contrib[, 1:5]))
 ```
 
 The 1/12 of 8.125% level is represented by the red dash line.
 
-```{r}
+```{r plot loadings contribution to pc1}
 # Contributions of variables to PC1
 fviz_contrib(pca, choice = "var", axes = 1, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC1 is attacked related, as high loadings are Home Team Shots, Away Team Shots, Home Team Shots on Target, Away Team Shots on Target, Home Team Corners and Away Team Corners, which explains 49.10% of variance. It is reasonable as attack is the best way to win a game in soccer, so as to explaining the game.
 
-```{r}
+```{r pc2}
 # Contributions of variables to PC2
 fviz_contrib(pca, choice = "var", axes = 2, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC2 is a referre statistics, which seems referre related issue since both Home and Away Team are involved in the statistics. Major contributions are Home Team Fouls Committed, Away Team Yellow Cards and Away Team Red Cards. PC3 explains 11.31% variance.
 
-```{r}
+```{r pc3}
 # Contributions of variables to PC3
 fviz_contrib(pca, choice = "var", axes = 3, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC3 is Away Team foul play statistics. High loadings are Away Team Fouls Committed and Away Team Yellow Cards. PC3 explains 10.20% variance.
 
-```{r}
+```{r pc4}
 # Contributions of variables to PC4
 fviz_contrib(pca, choice = "var", axes = 4, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
 
 PC4 is Home Team Red Cards statistics. PC4 explains 8.87% variance.
 
-```{r}
+```{r pc5}
 # Contributions of variables to PC5
 fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b", color = "#3d195b")
 ```
@@ -229,7 +229,7 @@ fviz_contrib(pca, choice = "var", axes = 5, top = 12, fill = "#3d195b", color = 
 PC5 seems representing Home Team Advantage. The reason is the loadings of Home Team Fouls Committed and Away Team Fouls Committed are similar, but Away Team Red Cards is much higher than Home Team Yellow Cards. PC5 explains 8.32% variance. The correlation circle in Section 4.1provides graphical repsentation of this PC.
 
 ### Scatter plot
-```{r}
+```{r scatter plot}
 score1 <- pca$x[, 1:5]
 pairs(score1)
 ```
@@ -237,7 +237,7 @@ pairs(score1)
 # Findings
 ## Correlation circle
 The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The representation of variables differs from the plot of the observations: The observations are represented by their projections, but the variables are represented by their correlations (Abdi and Williams 2010).
-```{r}
+```{r pca var}
 fviz_pca_var(pca,
   col.var = "cos2",
   gradient.cols = c("black", "blue", "red"),
@@ -251,7 +251,7 @@ One interesting observation is home team fouls are positively related to yellow 
 
 ## Quality and contribution
 Below is a series of plots showing each club contribution in PCs
-```{r}
+```{r clubs contribution of each pc}
 fviz_contrib(pca,
   choice = "ind",
   axes = 1,
@@ -292,7 +292,7 @@ fviz_contrib(pca,
 ## Biplot
 Biplot is a combination of row data to PCs.
 Biplot visualize the data by assigning the PC1 and PC2 to X and Y Axis of Scatter chart like below.
-```{r}
+```{r biplot}
 fviz_pca_biplot(pca,
   repel = TRUE,
   col.var = "blue", # Variables color
@@ -308,7 +308,7 @@ From the analysis, below are some major findings.
 2. Low number in Foul can divide the club ranking. Left side clubs, Liverpool, Tottenham, Manchester City, Chelsea and Arsenal, are top 6 in final ranking. Manchester United seems an outliner in the elite group as it was the first runner-up but located at the middle of PC1. North-east region clubs, including West Bromwich Albion, Swansea City and Stoke City are high in PC2 which means more foul. Stoke City got high Home Yellow Cards too. Besides, these three teams are not good in both Home and Away attacks. According to the final ranking, these three teams performed worse and relegated in Season 2018-2019.
 
 ## Loadings
-```{r}
+```{r loadings}
 (Loadings <- pca$rotation[, 1:5] %>%
   round(2) %>%
   data.frame() %>%
@@ -318,7 +318,7 @@ From the analysis, below are some major findings.
 ```
 
 ## Plot time series of the Index by the clubs
-```{r}
+```{r time series of clubs}
 d$PC1 <- pca$x[, 1]
 d$PC2 <- pca$x[, 2]
 
@@ -338,7 +338,7 @@ d %>%
 
 Manchester City kept PC1 mean above 0 all the time.
 
-```{r}
+```{r comparison}
 d %>%
   ggplot() +
   geom_line(aes(x = as.Date(Date), y = PC2, group = 1), show.legend = F, colour = "#3d195b") +
@@ -354,7 +354,7 @@ d %>%
 ```
 
 ## Mean of PC1 and PC2
-```{r}
+```{r pc1 and pc2 mean}
 d %>%
   group_by(HomeTeam) %>%
   summarise(
@@ -366,7 +366,7 @@ d %>%
 ```
 
 ## Rolling mean of PC1 and PC2
-```{r}
+```{r rolling mean of pc1 and pc2}
 d %<>% group_by(HomeTeam) %>%
   arrange(Date) %>%
   mutate(
@@ -391,7 +391,7 @@ ggplot(Index.1718, aes(x = M.A.PC1, y = M.A.PC2)) +
 
 ## Away Team Analysis
 For complete demonstration, Away Team PCA is carried out as below.
-```{r}
+```{r away team analysis}
 d2 <- d %>%
   group_by(AwayTeam) %>%
   summarise(

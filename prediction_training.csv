@@ -1,0 +1,6 @@
+Income Group,Overall Prediction,(N/142),Accurate Prediction,(N/107),Training dataset,(N/142),Reality,(N/177)
+High Income,42,29.58%,35,32.71%,40,28.17%,54,30.51%
+Low Income,22,15.49%,18,16.82%,25,17.61%,30,16.95%
+Lower Middle,33,23.24%,23,21.50%,36,25.35%,44,24.86%
+Upper Middle,45,31.69%,31,28.97%,41,28.87%,49,27.68%
+Total,142,100.00%,107,100.00%,142,100.00%,177,100.00%

@@ -3,9 +3,6 @@ title: "RMSC5001 Project 2018-2019 - Principal Component Analysis"
 author: CHING, Pui Chi 1155102106 <br/> MA, Cheuk Fung 1155106595 <br/> YEUNG, Ka Ming 1155104060
 date: "`r Sys.Date()`"
 output:
-  word_document:
-    toc: yes
-    toc_depth: '5'
   html_document:
     df_print: paged
     highlight: pygments
@@ -14,11 +11,15 @@ output:
     toc: yes
     toc_depth: 5
     toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '5'
 always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300, fig.width = 7)
+#knitr::opts_chunk$set(echo = FALSE, dpi = 300, fig.width = 7)
 ```
 
 # Introduction
@@ -55,8 +56,6 @@ The reasons of using PCA can be summarized as follow:
 
 5. Conclusion
 + Principal componenet analysis can sort out the winning elements and help club managers to run their clubs.
-
-==================
 
 # Set Up
 ## Library

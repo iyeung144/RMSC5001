@@ -19,9 +19,11 @@ library(tidyverse)
 
 ## ----data field, echo=FALSE, results='asis'------------------------------
 income <- read.csv("worldbank_income.csv")
+print(income)
 kable(income, caption = "World Bank definition on the income group")
 
 field <- read.csv("worldbank_field.csv")
+print(field)
 kable(field, caption = "Field information")
 
 
@@ -33,7 +35,7 @@ r <- 0.80 # set sampling ratio
 id <- sample(1:n, size = round(r * n)) # generate id
 train <- d[id, ] # training dataset
 test <- d[-id, ]
-head(d)
+print(head(d))
 
 
 ## ----world map-----------------------------------------------------------
@@ -64,7 +66,7 @@ do.call(
 
 ## ----plot income group number--------------------------------------------
 # All data
-prop.table(table(d$INCOME_GROUP))
+print(prop.table(table(d$INCOME_GROUP)))
 all_plot <- d[, -1] %>%
   count(INCOME_GROUP) %>%
   ggplot() +
@@ -77,7 +79,7 @@ all_plot <- d[, -1] %>%
   theme_fivethirtyeight()
 
 # Training data
-prop.table(table(train$INCOME_GROUP))
+print(prop.table(table(train$INCOME_GROUP)))
 train_plot <- train[, -1] %>%
   count(INCOME_GROUP) %>%
   ggplot() +
@@ -90,7 +92,7 @@ train_plot <- train[, -1] %>%
   theme_fivethirtyeight()
 
 # Testing data
-prop.table(table(test$INCOME_GROUP))
+print(prop.table(table(test$INCOME_GROUP)))
 test_plot <- test[, -1] %>%
   count(INCOME_GROUP) %>%
   ggplot() +
@@ -140,7 +142,7 @@ rpart.rules(ctree)
 ## ----rule results, echo=FALSE, results='asis'----------------------------
 rule.results <- read.csv("rule_results.csv")
 kable(rule.results, caption = "Classification Tree Explanatory Power")
-
+print(rule.results)
 
 ## ----tree complexity-----------------------------------------------------
 printcp(ctree)
@@ -149,27 +151,29 @@ plotcp(ctree)
 
 ## ----training prediction-------------------------------------------------
 predict_train2 <- predict(ctree, train, type = "class")
-table(predict_train2, train$INCOME_GROUP)
+print(table(predict_train2, train$INCOME_GROUP))
 
 
 ## ----testing prediction--------------------------------------------------
 predict_test2 <- predict(ctree, test, type = "class")
-table(predict_test2, test$INCOME_GROUP)
+print(table(predict_test2, test$INCOME_GROUP))
 
 
 ## ----base classification accuracy----------------------------------------
 base_accuracy <- mean(predict_test2 == test$INCOME_GROUP)
-(base_accuracy)
+print(base_accuracy)
 
 
 ## ----train prediction, echo=FALSE, results='asis'------------------------
 prediction.training <- read.csv("prediction_training.csv")
 kable(prediction.training, caption = "Results on the prediction of training data")
+print(prediction.training)
 
 
 ## ----test prediction, echo=FALSE, results='asis'-------------------------
 prediction.testing <- read.csv("prediction_testing.csv")
 kable(prediction.testing, caption = "Results on the prediction of training data")
+print(prediction.testing)
 
 
 ## ----pre-pruning---------------------------------------------------------
@@ -184,6 +188,7 @@ REGION + GDP +
 data = train, method = "class",
 control = rpart.control(cp = 0, maxdepth = 3, minsplit = 20)
 )
+print(ctree_preprun)
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_preprun, test, type = "class")
 accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
@@ -192,9 +197,9 @@ accuracy_preprun <- mean(test$pred == test$INCOME_GROUP)
 ## ----post-pruning--------------------------------------------------------
 # Prune the ctree_model based on the optimal cp value
 ctree_pruned <- prune(ctree, cp = 0.046)
-
+print(ctree_pruned)
 # Compute the accuracy of the pruned tree
 test$pred <- predict(ctree_pruned, test, type = "class")
 accuracy_postprun <- mean(test$pred == test$INCOME_GROUP)
-data.frame(base_accuracy, accuracy_preprun, accuracy_postprun)
+print(data.frame(base_accuracy, accuracy_preprun, accuracy_postprun))
 

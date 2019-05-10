@@ -15,6 +15,7 @@ library(knitr)
 
 ## ----echo=FALSE, results='asis'------------------------------------------
 field <- read.csv("field.csv")
+print(field)
 kable(field, caption = "Field information")
 
 
@@ -38,8 +39,8 @@ d1 <- d %>%
     AR = sum(AR)
   )
 league.df <- column_to_rownames(d1, var = "HomeTeam")
-(league.df)
-summary(league.df)
+print(league.df)
+print(summary(league.df))
 ggplot(stack(league.df), aes(x = ind, y = values)) +
   geom_boxplot(fill = "#3d195b", colour = "red") +
   labs(
@@ -51,12 +52,13 @@ ggplot(stack(league.df), aes(x = ind, y = values)) +
 
 ## ----correlation plot----------------------------------------------------
 r <- cor(league.df)
+print(r)
 corrplot.mixed(r, lower = "square", upper = "number", order = "FPC")
 
 
 ## ----pca-----------------------------------------------------------------
 pca <- prcomp(league.df, center = TRUE, scale = TRUE)
-summary(pca)
+print(summary(pca))
 
 
 ## ----scree plot----------------------------------------------------------
@@ -69,6 +71,7 @@ fviz_screeplot(pca,
 
 ## ----pca variance--------------------------------------------------------
 var <- get_pca_var(pca)
+print(var)
 corrplot(var$cos2, is.corr = FALSE, method = "square")
 # Total cos2 of variables on PC1 and PC2
 fviz_cos2(pca,
@@ -79,11 +82,11 @@ fviz_cos2(pca,
 
 
 ## ----eigenvalues analysis------------------------------------------------
-zapsmall(get_eigenvalue(pca))
+print(zapsmall(get_eigenvalue(pca)))
 
 
 ## ----loadings of pc------------------------------------------------------
-(zapsmall(var$contrib[, 1:5]))
+print((zapsmall(var$contrib[, 1:5])))
 
 
 ## ----plot loadings contribution to pc1-----------------------------------
@@ -177,7 +180,7 @@ fviz_pca_biplot(pca,
   mutate(Attribute = rownames(.)) %>%
   select(Attribute, everything()) %>%
   arrange(PC1))
-
+print(Loadings)
 
 ## ----time series of clubs------------------------------------------------
 d$PC1 <- pca$x[, 1]
@@ -264,8 +267,8 @@ d2 <- d %>%
     AR = sum(AR)
   )
 away.df <- column_to_rownames(d2, var = "AwayTeam")
-(away.df)
-summary(away.df)
+print((away.df))
+print(summary(away.df))
 ggplot(stack(away.df), aes(x = ind, y = values)) +
   geom_boxplot(fill = "#3d195b", colour = "red") +
   labs(
@@ -274,7 +277,7 @@ ggplot(stack(away.df), aes(x = ind, y = values)) +
     title = "Boxplot for 12 variables"
   )
 pca2 <- prcomp(away.df, center = TRUE, scale = TRUE)
-summary(pca2)
+print(summary(pca2))
 fviz_pca_var(pca2,
   col.var = "cos2",
   gradient.cols = c("black", "blue", "red"),
